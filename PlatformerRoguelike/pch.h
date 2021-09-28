@@ -2,6 +2,57 @@
 #define PCH_H
 #include "stdafx.h"
 
+class GameSprite;
+class GameFramework;
+
+class GameScene;
+class sceneTitle;
+class sceneMainMenu;
+class sceneGame;
+class sceneScoring;
+class sceneSetting;
+
+class GameInstance;
+class oSolid;
+
+
+#define VIEW_W 320
+#define VIEW_H 240
+#define PORT_W 640
+#define PORT_H 480
+
+namespace Render {
+void refresh(HWND hwnd);
+
+void transform_set(HDC, XFORM&);
+void transform_set_identity(HDC);
+void transform_set_rotation(HDC);
+
+BOOL draw_rectangle(HDC, int, int, int, int);
+void draw_end(HDC, HGDIOBJ, HGDIOBJ);
+
+static XFORM transform_identity{ 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
+}
+
+inline double point_distance(double x1, double y1, double x2, double y2) {
+	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+}
+
+inline double radtodeg(double value) {
+	return value / M_PI * 180;
+}
+
+inline double degtorad(double value) {
+	return value * M_PI / 180;
+}
+
+inline double lengthdir_x(double length, double direction) {
+	return cos(degtorad(direction)) * length;
+}
+
+inline double lengthdir_y(double length, double direction) {
+	return -sin(degtorad(direction)) * length;
+}
 
 typedef LRESULT(CALLBACK* WindowProcedure)(HWND, UINT, WPARAM, LPARAM);
 
@@ -20,4 +71,21 @@ public:
 	LONG width, height;						// 창 크기
 };
 
+constexpr COLORREF COLOR_BLACK = RGB(0, 0, 0);
+constexpr COLORREF COLOR_WHITE = RGB(255, 255, 255);
+constexpr COLORREF COLOR_GREY = RGB(128, 128, 128);
+constexpr COLORREF COLOR_LTGREY = RGB(192, 192, 192);
+constexpr COLORREF COLOR_DKGREY = RGB(64, 64, 64);
+constexpr COLORREF COLOR_SEMIBLACK = RGB(224, 224, 224);
+
+constexpr COLORREF COLOR_SALMON = RGB(255, 128, 128);
+constexpr COLORREF COLOR_RED = RGB(255, 0, 0);
+constexpr COLORREF COLOR_MAROON = RGB(128, 0, 0);
+constexpr COLORREF COLOR_LIME = RGB(0, 255, 0);
+constexpr COLORREF COLOR_GREEN = RGB(0, 128, 0);
+constexpr COLORREF COLOR_BLUE = RGB(0, 0, 255);
+constexpr COLORREF COLOR_NAVY = RGB(20, 18, 149);
+constexpr COLORREF COLOR_ORANGE = RGB(255, 128, 0);
+constexpr COLORREF COLOR_YELLOW = RGB(255, 255, 0);
+constexpr COLORREF COLOR_GOLD = RGB(223, 130, 20);
 #endif

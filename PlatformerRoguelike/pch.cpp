@@ -2,6 +2,27 @@
 #include "resource.h"
 
 
+void Render::refresh(HWND hwnd) {
+	InvalidateRect(hwnd, NULL, FALSE);
+}
+
+void Render::transform_set(HDC world, XFORM& info) {
+	SetWorldTransform(world, &info);
+}
+
+void Render::transform_set_identity(HDC world) {
+	SetWorldTransform(world, &transform_identity);
+}
+
+void Render::draw_end(HDC handle, HGDIOBJ object_old, HGDIOBJ object_default) {
+	SelectObject(handle, object_old);
+	DeleteObject(object_default);
+}
+
+BOOL Render::draw_rectangle(HDC hDC, int x1, int y1, int x2, int y2) {
+	return Rectangle(hDC, x1, y1, x2, y2);
+}
+
 WindowsClient::WindowsClient(LONG cw, LONG ch)
 	: width(cw), height(ch), procedure(NULL) {}
 
