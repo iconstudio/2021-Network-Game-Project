@@ -11,7 +11,8 @@ WCHAR szWindowClass[MAX_LOADSTRING];
 WindowsClient game_client{ PORT_W, PORT_H };
 GameFramework framework;
 
-auto SPRITE_BALL = framework.make_sprite(TEXT("Resources\\ball.png"), 1, 32, 32);
+auto sBall = framework.make_sprite(TEXT("Resources\\ball.png"), 1, 32, 32);
+auto sBlock = framework.make_sprite(TEXT("Resources\\blockpurple.png"), 1, 0, 0);
 
 
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -31,7 +32,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	auto room_first = framework.make_scene<GameScene>();
 	auto inst_first = room_first->instance_create<GameInstance>(90, 90);
-	inst_first->set_sprite(SPRITE_BALL);
+	inst_first->set_sprite(sBall);
 
 	framework.make_scene<GameScene>();
 	framework.background_color = COLOR_GREY;
