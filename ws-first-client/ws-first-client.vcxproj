@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="FB_IMG_1501458143110.jpg" />
+    <Image Include="kittylie.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -38,5 +38,8 @@
     <Image Include="FB_IMG_1501458143110.jpg">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="kittylie.jpg">
+      <Filter>리소스 파일</Filter>
+    </Image>
   </ItemGroup>
 </Project>

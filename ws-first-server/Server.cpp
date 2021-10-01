@@ -4,19 +4,81 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <fstream>
+using namespace std;
 
 #define SERVER_PORT 9000
-#define BUFFER_SIZE 512
+#define INFO_LENGTH 1024
 
 void err_quit(const char* msg);
-
 void err_display(const char* msg);
 
-int recvn(SOCKET sock, char* buffer, int length, int flags);
+char* RECV_FILENAME = nullptr;
+
+void print_receive(int progress, int size) {
+	int percent = (int)((double)progress / (double)size) * 100;
+
+	char info_text[INFO_LENGTH];
+	sprintf_s(info_text, INFO_LENGTH, "파일 (%s) 전송 중: \n", RECV_FILENAME);
+
+	char info_percentage[100];
+	sprintf_s(info_percentage, 100, "전송률: %d%% (%d/%d)\n", percent, progress, size);
+	strcat_s(info_text, info_percentage);
+
+	system("cls");
+	puts(info_text);
+}
+
+int recvn(SOCKET sock, char* buffer, int length, int flags) {
+	int received, left = length;
+	char* ptr = buffer;
+
+	int progress = 0;
+	while (0 < left) {
+		received = recv(sock, ptr, left, flags);
+		if (SOCKET_ERROR == received) {
+			return SOCKET_ERROR;
+		} else if (0 == received) {
+			break;
+		}
+
+		progress += received;
+		left -= received;
+		ptr += received;
+		print_receive(progress, length);
+	}
+
+	return (length - left);
+}
+
+int receive_packet(SOCKET socket, char*& buffer, int flags) {
+	int buffer_length = 0;
+	int result = recvn(socket, (char*)(&buffer_length), sizeof(int), flags);
+	if (SOCKET_ERROR == result) {
+		err_display("recvn 1");
+		return 0;
+	} else if (0 == result) {
+		return 0;
+	}
+
+	print_receive(0, buffer_length);
+
+	buffer = new char[buffer_length + 1];
+	result = recvn(socket, buffer, buffer_length, flags);
+	if (SOCKET_ERROR == result) {
+		err_display("recvn 2");
+		return 0;
+	} else if (0 == result) {
+		return 0;
+	}
+
+	buffer[buffer_length] = '\0';
+	printf("\n[TCP 서버] 수신 완료 (크기: %d): %s\n", buffer_length, RECV_FILENAME);
+
+	return buffer_length;
+}
 
 int main(void) {
-	int result;
 	WSADATA wsa;
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -31,7 +93,8 @@ int main(void) {
 	server_address.sin_family = AF_INET;
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_address.sin_port = htons(SERVER_PORT);
-	result = bind(listener, (SOCKADDR*)(&server_address), sizeof(server_address));
+
+	int result = bind(listener, (SOCKADDR*)(&server_address), sizeof(server_address));
 	if (SOCKET_ERROR == result) err_quit("bind");
 
 	result = listen(listener, SOMAXCONN); // 받을 수 있는 큐 크기
@@ -41,42 +104,45 @@ int main(void) {
 	SOCKADDR_IN client_address;
 	int address_length;
 
-	char buffer[BUFFER_SIZE];
-	int buffer_length;
-
+	puts("서버 실행 중");
 	while (true) {
 		address_length = sizeof(client_address);
 		client_socket = accept(listener, (SOCKADDR*)(&client_address), &address_length);
-		if (SOCKET_ERROR == result) {
+		if (SOCKET_ERROR == client_socket) {
 			err_display("accept");
 			break;
 		}
 
-		auto client_ipv4 = inet_ntoa(client_address.sin_addr);
-		auto client_port = ntohs(client_address.sin_port);
+		char* client_ipv4 = inet_ntoa(client_address.sin_addr);
+		u_short client_port = ntohs(client_address.sin_port);
 		printf("\n[TCP 서버] 클라이언트 접속 - IP 주소: %s, 포트 번호 = %d\n"
 			   , client_ipv4, client_port);
 
-		int received;
-		while (true) {
-			received = recvn(client_socket, (char*)(&buffer_length), sizeof(int), 0);
-			if (SOCKET_ERROR == received) {
-				err_display("recvn 1");
-				break;
-			} else if (0 == received) {
-				break;
-			}
+		char* file_path = nullptr;
+		char* file_buffer = nullptr;
 
-			received = recvn(client_socket, buffer, buffer_length, 0);
-			if (SOCKET_ERROR == received) {
-				err_display("recvn 2");
-				break;
-			} else if (0 == received) {
-				break;
-			}
+		// 파일 이름
+		result = receive_packet(client_socket, file_path, 0);
+		if (0 == result) {
+			err_quit("file_path");
+			break;
+		}
+		RECV_FILENAME = new char[result + 1];
+		strcpy_s(RECV_FILENAME, result, file_path);
 
-			buffer[received] = '\0';
-			printf("\n[TCP 서버] 받은 정보: %s\n", buffer);
+		// 파일 내용
+		result = receive_packet(client_socket, file_buffer, 0);
+		if (0 == result) {
+			err_quit("file_buffer");
+			break;
+		}
+
+		FILE* myfile = fopen(file_path, "wb");
+		if (myfile) {
+			fwrite(file_buffer, result, 1, myfile);
+			fclose(myfile);
+		} else {
+			err_quit("fopen");
 		}
 
 		printf("\n[TCP 서버] 클라이언트 종료 - IP 주소: %s, 포트 번호 = %d\n", client_ipv4, client_port);
@@ -116,21 +182,3 @@ void err_display(const char* msg) {
 	LocalFree(lpMSGBuffer);
 }
 
-int recvn(SOCKET sock, char* buffer, int length, int flags) {
-	int received, left = length;
-	char* ptr = buffer;
-
-	while (0 < left) {
-		received = recv(sock, ptr, left, flags);
-		if (SOCKET_ERROR == received) {
-			return SOCKET_ERROR;
-		} else if (0 == received) {
-			break;
-		}
-
-		left -= received;
-		ptr += received;
-	}
-
-	return (length - left);
-}

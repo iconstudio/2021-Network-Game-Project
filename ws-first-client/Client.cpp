@@ -4,24 +4,37 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <fstream>
 using namespace std;
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 9000
-#define BUFFER_SIZE 512
+#define PATH_SIZE 512
+#define BUFFER_TYPE_FILEPATH 1
+#define BUFFER_TYPE_FILEDATA 2
 
 
 void err_quit(const char* msg);
 
 void err_display(const char* msg);
 
-int recvn(SOCKET sock, char* buffer, int length, int flags);
+int send_packet(SOCKET socket, char* buffer, int length, int flags) {
+	int result = send(socket, (char*)(&length), sizeof(int), flags);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 1");
+	}
+
+	result = send(socket, buffer, length, 0);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 2");
+	}
+
+	return result;
+}
 
 int main(void) {
 	int result;
-	WSADATA wsa; // 윈도우 소켓 정보
+	WSADATA wsa;
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
 		return 1;
@@ -38,55 +51,87 @@ int main(void) {
 	result = connect(mysocket, (SOCKADDR*)(&server_address), sizeof(server_address));
 	if (SOCKET_ERROR == result) err_quit("connect");
 
+	char file_path[PATH_SIZE];
+	long file_size = 0;
+	char* file_buffer = nullptr;
+
+	printf("[TCP 클라이언트 실행]\n");
+	printf("보낼 파일 이름> ");
+	scanf_s("%s", &file_path, PATH_SIZE);
+	file_path[PATH_SIZE - 1] = '\0';
+
+	FILE* myfile = fopen(file_path, "rb");
+	if (myfile) {
+		fseek(myfile, 0, SEEK_END);
+		file_size = ftell(myfile);
+		fseek(myfile, 0, SEEK_SET);
+		file_buffer = new char[file_size];
+
+		while (!feof(myfile)) {
+			fread(file_buffer, file_size, 1, myfile);
+		}
+
+		fclose(myfile);
+	} else {
+		err_quit("fopen");
+	}
+
 	//
-	//
-	//*
-	ifstream file_reader("kittylie.jpg", ios::binary);
+	result = send_packet(mysocket, file_path, strlen(file_path), 0);
+	printf("\n[TCP 클라이언트] 파일 이름으로 %d 바이트를 보냈습니다.\n", result);
+	
+	result = send_packet(mysocket, (char*)(file_buffer), file_size, 0);
+	printf("\n[TCP 클라이언트] 파일 버퍼로 %d 바이트를 보냈습니다.\n", result);
+
+	/*
+	ifstream file_reader(file_path, ios::binary);
 	if (file_reader) {
 		// seekg를 이용한 파일 크기 추출
 		file_reader.seekg(0, file_reader.end);
-		int length = (int)file_reader.tellg();
+		file_size = file_reader.tellg();
 		file_reader.seekg(0, file_reader.beg);
 
-		// malloc으로 메모리 할당
-		unsigned char * buffer = (unsigned char*)malloc(length);
+		file_buffer = new char[file_size + 1];
 
-		// read data as a block:
-		file_reader.read((char*)buffer, length);
+		file_reader.read(file_buffer, file_size);
 		file_reader.close();
-		//*_data = buffer; 
-		//*datalen = length;
+	} else {
+		err_quit("fopen");
 	}
+
+	// 파일 이름
+	char *buffer = (char*)(file_path);
+	u_long buffer_length = strlen(file_path);
+
+	result = send(mysocket, (char*)(&buffer_length), sizeof(u_long), 0);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 1");
+	}
+
+	result = send(mysocket, buffer, buffer_length, 0);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 2");
+	}
+
+	printf("\n[TCP 클라이언트] 파일 이름으로 %d 바이트를 보냈습니다.\n", buffer_length);
+	
+	// 파일 내용
+	buffer = (char*)(file_buffer);
+	buffer_length = (u_long)(file_size);
+
+	result = send(mysocket, (char*)(&buffer_length), sizeof(u_long), 0);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 3");
+	}
+
+	result = send(mysocket, buffer, buffer_length, 0);
+	if (SOCKET_ERROR == result) {
+		err_quit("send 4");
+	}
+
+	printf("\n[TCP 클라이언트] 파일 버퍼로 %d 바이트를 보냈습니다.\n", buffer_length);
 	//*/
 
-	char buffer[BUFFER_SIZE];
-	int buffer_length;
-	const char* test_data[] = {
-		"안녕하세요"
-		, "반가워요"
-		, "오늘따라 할 이야기가 많을 것 같네요"
-		, "저도 그렇네요"
-	};
-
-	for (int i = 0; i < 4; i++) {
-		buffer_length = strlen(test_data[i]);
-		strncpy(buffer, test_data[i], buffer_length);
-
-		//
-		result = send(mysocket, (char*)(&buffer_length), sizeof(int), 0);
-		if (SOCKET_ERROR == result) {
-			err_display("send 1");
-			break;
-		}
-
-		result = send(mysocket, buffer, buffer_length, 0);
-		if (SOCKET_ERROR == result) {
-			err_display("send 2");
-			break;
-		}
-
-		printf("\n[TCP 클라이언트] %d+%d 바이트를 보냈습니다.\n", sizeof(int), result);
-	}
 	closesocket(mysocket);
 
 	WSACleanup();
@@ -95,7 +140,7 @@ int main(void) {
 }
 
 void err_quit(const char* msg) {
-	LPVOID lpMSGBuffer; // 메시지의 내용을 담을 버퍼 변수입니다.
+	LPVOID lpMSGBuffer;
 
 	int error_code = WSAGetLastError();
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code,
@@ -103,15 +148,13 @@ void err_quit(const char* msg) {
 
 	MessageBox(NULL, (LPTSTR)(lpMSGBuffer), msg, MB_ICONERROR);
 
-	// 버퍼 해제
 	LocalFree(lpMSGBuffer);
 
-	// 콘솔에 코드 1을 출력하며 프로그램을 나갑니다.
 	exit(1);
 }
 
 void err_display(const char* msg) {
-	LPVOID lpMSGBuffer; // 메시지의 내용을 담을 버퍼 변수입니다.
+	LPVOID lpMSGBuffer;
 
 	int error_code = WSAGetLastError();
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code,
@@ -119,25 +162,5 @@ void err_display(const char* msg) {
 
 	printf("[%s] %s", msg, (char*)lpMSGBuffer);
 
-	// 버퍼 해제
 	LocalFree(lpMSGBuffer);
-}
-
-int recvn(SOCKET sock, char* buffer, int length, int flags) {
-	int received, left = length;
-	char* ptr = buffer;
-
-	while (0 < left) {
-		received = recv(sock, ptr, left, flags);
-		if (SOCKET_ERROR == received) {
-			return SOCKET_ERROR;
-		} else if (0 == received) {
-			break;
-		}
-
-		left -= received;
-		ptr += received;
-	}
-
-	return (length - left);
 }
