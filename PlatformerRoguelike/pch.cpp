@@ -14,13 +14,23 @@ void Render::transform_set_identity(HDC world) {
 	SetWorldTransform(world, &transform_identity);
 }
 
-void Render::draw_end(HDC handle, HGDIOBJ object_old, HGDIOBJ object_default) {
-	SelectObject(handle, object_old);
-	DeleteObject(object_default);
+void Render::draw_end(HDC canvas, HGDIOBJ object_old, HGDIOBJ object_new) {
+	SelectObject(canvas, object_old);
+	DeleteObject(object_new);
 }
 
-BOOL Render::draw_rectangle(HDC hDC, int x1, int y1, int x2, int y2) {
-	return Rectangle(hDC, x1, y1, x2, y2);
+void Render::draw_clear(HDC canvas, int width, int height, COLORREF color) {
+	auto m_hPen = CreatePen(PS_NULL, 1, color);
+	auto m_oldhPen = (HPEN)SelectObject(canvas, m_hPen);
+	auto m_hBR = CreateSolidBrush(color);
+	auto m_oldhBR = (HBRUSH)SelectObject(canvas, m_hBR);
+	draw_rectangle(canvas, 0, 0, width, height);
+	draw_end(canvas, m_oldhBR, m_hBR);
+	draw_end(canvas, m_oldhPen, m_hPen);
+}
+
+BOOL Render::draw_rectangle(HDC canvas, int x1, int y1, int x2, int y2) {
+	return Rectangle(canvas, x1, y1, x2, y2);
 }
 
 WindowsClient::WindowsClient(LONG cw, LONG ch)
@@ -39,7 +49,7 @@ BOOL WindowsClient::initialize(HINSTANCE handle, WNDPROC procedure, LPCWSTR titl
 	properties.hInstance = handle;
 	properties.hIcon = LoadIcon(handle, MAKEINTRESOURCE(IDI_PLATFORMERROGUELIKE));
 	properties.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	properties.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	properties.hbrBackground = CreateSolidBrush(0); //(HBRUSH)(COLOR_WINDOW + 1);
 	properties.lpszMenuName = MAKEINTRESOURCE(IDC_PLATFORMERROGUELIKE);
 	properties.lpszClassName = id;
 	properties.hIconSm = LoadIcon(properties.hInstance, MAKEINTRESOURCE(IDI_SMALL));

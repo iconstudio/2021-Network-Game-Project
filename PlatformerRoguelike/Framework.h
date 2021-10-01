@@ -5,7 +5,7 @@
 
 class GameFramework {
 public:
-	GameFramework();
+	GameFramework(int vw, int vh, int pw, int ph);
 	~GameFramework();
 
 	void on_create(); // 상태 시작
@@ -48,6 +48,10 @@ public:
 
 	LONG mouse_x, mouse_y; // 마우스 좌표
 	COLORREF background_color = COLOR_WHITE;
+
+	int screen_x, screen_y;
+	const int view_width, view_height;
+	const int port_width, port_height;
 private:
 	class GameInput {
 	public:

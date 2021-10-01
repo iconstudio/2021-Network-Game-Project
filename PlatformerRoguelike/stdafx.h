@@ -40,4 +40,19 @@
 #include <cmath>
 #include <chrono>
 
-using namespace std;
+using std::shared_ptr;
+using std::unique_ptr;
+using std::make_shared;
+using std::make_unique;
+using std::deque;
+using std::vector;
+using std::list;
+using std::stack;
+using std::queue;
+using std::set;
+using std::map;
+using std::string;
+using std::iostream;
+using std::ifstream;
+using std::ofstream;
+using std::chrono::system_clock;

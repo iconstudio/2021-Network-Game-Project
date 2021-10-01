@@ -1,5 +1,4 @@
 ﻿#include "pch.h"
-#include "stdafx.h"
 #include "PlatformerRoguelike.h"
 #include "Framework.h"
 
@@ -8,11 +7,12 @@
 
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
-WindowsClient game_client{ PORT_W, PORT_H };
-GameFramework framework;
+WindowsClient game_client{ CLIENT_W, CLIENT_H };
+GameFramework framework{ VIEW_W, VIEW_H, PORT_W, PORT_H };
 
 auto sBall = framework.make_sprite(TEXT("Resources\\ball.png"), 1, 32, 32);
 auto sBlock = framework.make_sprite(TEXT("Resources\\blockpurple.png"), 1, 0, 0);
+auto sPlayer = framework.make_sprite(TEXT("Resources\\player.png"), 1, 6, 6);
 
 
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -30,11 +30,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	auto room_first = framework.make_scene<GameScene>();
-	auto inst_first = room_first->instance_create<GameInstance>(90, 90);
-	inst_first->set_sprite(sBall);
-
-	framework.make_scene<GameScene>();
+	framework.make_scene<sceneGame>();
 	framework.background_color = COLOR_GREY;
 
 	framework.init();
@@ -48,17 +44,118 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
-		} else {
-
 		}
 	}
 
 	return (int)msg.wParam;
 }
 
+void sceneGame::on_create() {
+	map_blend.SourceConstantAlpha = 255;
+	map_blend.BlendOp = AC_SRC_OVER;
+	map_blend.BlendFlags = 0;
+	map_blend.AlphaFormat = AC_SRC_ALPHA;
+	//framework.background_color = 0;
+
+	build_terrain = new char*[TILE_JMAX];
+	for (int j = 0; j < TILE_JMAX; ++j) {
+		build_terrain[j] = new char[TILE_IMAX];
+		ZeroMemory(build_terrain[j], TILE_IMAX);
+	}
+
+	FILE* myfile = nullptr;
+	auto result = fopen_s(&myfile, "map.txt", "r+");
+	if (myfile) {
+		int j = 0;
+		while (!feof(myfile)) {
+			fread(build_terrain[j], sizeof(char), TILE_IMAX, myfile);
+			fgetc(myfile); // throw a \n.
+			if (TILE_JMAX <= ++j) break;
+		}
+
+		fclose(myfile);
+	} else {
+		if (MessageBox(NULL, TEXT("게임 맵 파일을 찾을 수 없습니다."), TEXT("오류"), MB_OK | MB_ICONERROR)) {
+			DestroyWindow(game_client.hwindow);
+			return;
+		}
+	}
+
+	HDC world_dc = GetDC(NULL);
+	map_surface = CreateCompatibleDC(world_dc);
+	map_bitmap = CreateCompatibleBitmap(world_dc, VIEW_W, VIEW_H);
+	SelectObject(map_surface, map_bitmap);
+
+	Render::draw_clear(map_surface, VIEW_W, VIEW_H, 0);
+
+	auto m_hPen = CreatePen(PS_NULL, 1, COLOR_GREEN);
+	auto m_oldhPen = (HPEN)SelectObject(map_surface, m_hPen);
+	auto m_hBR = CreateSolidBrush(COLOR_GREEN);
+	auto m_oldhBR = (HBRUSH)SelectObject(map_surface, m_hBR);
+	int i, j;
+	double cx, cy;
+	char block_data;
+	auto pp = instance_create<GameInstance>(58.0, 208.0);
+	pp->set_sprite(sPlayer);
+
+	for (j = 0; j < TILE_JMAX; ++j) {
+		for (i = 0; i < TILE_IMAX; ++i) {
+			block_data = (build_terrain[j])[i];
+
+			if (block_data != '0') {
+				cx = i * 16.0;
+				cy = j * 16.0;
+				switch (block_data) {
+					case '@':
+					{
+						pp = instance_create<GameInstance>(cx + 8.0, cy + 8.0);
+						pp->set_sprite(sPlayer);
+					}
+					break;
+
+					case '1':
+					{
+						// 블록
+						//Rectangle(map_surface, i * 16, j * 16, (i + 1) * 16, (j + 1) * 16);
+						//auto block = instance_create<GameInstance>(i * 16.0, j * 16.0);
+						//block->set_sprite(sBlock);
+						sBlock->draw(map_surface, cx, cy);
+					}
+					break;
+
+					default:
+						break;
+				}
+			}
+		}
+	}
+	Render::draw_end(map_surface, m_oldhBR, m_hBR);
+
+	Render::draw_end(map_surface, m_oldhPen, m_hPen);
+
+	//instance_kill(pp.get());
+
+	GameScene::on_create();
+}
+
+void sceneGame::on_destroy() {
+	DeleteDC(map_surface);
+	DeleteObject(map_bitmap);
+	GameScene::on_destroy();
+}
+
+void sceneGame::on_update(double frame_advance) {
+	GameScene::on_update(frame_advance);
+}
+
+void sceneGame::on_render(HDC canvas) {
+	AlphaBlend(canvas, 0, 0, VIEW_W, VIEW_H, map_surface, 0, 0, VIEW_W, VIEW_H, map_blend);
+	GameScene::on_render(canvas);
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
-	// 창 생성
+		// 창 생성
 		case WM_CREATE:
 		{
 			SetTimer(hwnd, RENDER_TIMER_ID, 1, NULL);
@@ -135,4 +232,3 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	return 0;
 }
-

@@ -15,7 +15,8 @@ class sceneSetting;
 class GameInstance;
 class oSolid;
 
-
+#define CLIENT_W 800
+#define CLIENT_H 600
 #define VIEW_W 320
 #define VIEW_H 240
 #define PORT_W 640
@@ -28,11 +29,15 @@ void transform_set(HDC, XFORM&);
 void transform_set_identity(HDC);
 void transform_set_rotation(HDC);
 
+void draw_clear(HDC, int, int, COLORREF = 0);
 BOOL draw_rectangle(HDC, int, int, int, int);
 void draw_end(HDC, HGDIOBJ, HGDIOBJ);
 
 static XFORM transform_identity{ 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
 }
+
+template<typename T>
+constexpr auto sign(T _x) { return ((_x > 0) ? 1 : ((_x == 0) ? 0 : -1)); }
 
 inline double point_distance(double x1, double y1, double x2, double y2) {
 	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));

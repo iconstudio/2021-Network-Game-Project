@@ -1,4 +1,5 @@
 #pragma once
+#include "pch.h"
 #include "Sprite.h"
 
 
@@ -63,7 +64,6 @@ public:
 		if (loc != instances.end()) {
 			target->on_destroy();
 			instances.erase(loc);
-			delete target;
 		}
 	}
 

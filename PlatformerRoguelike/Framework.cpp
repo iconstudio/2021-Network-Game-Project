@@ -2,8 +2,13 @@
 #include "Framework.h"
 #include "Behavior.h"
 
-GameFramework::GameFramework()
-	: mouse_x(0), mouse_y(0), delta_time(0.0), state_id(nullptr), painter{}, elapsed(0) {}
+GameFramework::GameFramework(int vw, int vh, int pw, int ph)
+	: mouse_x(0), mouse_y(0), delta_time(0.0), state_id(nullptr), painter{}, elapsed(0)
+	, view_width(vw), view_height(vh), port_width(pw), port_height(ph) {
+
+	screen_x = (CLIENT_W - port_width) * 0.5;
+	screen_y = (CLIENT_H - port_height) * 0.25;
+}
 
 GameFramework::~GameFramework() {
 	for (auto& sprite : sprites)
@@ -89,23 +94,16 @@ void GameFramework::on_keyup(const WPARAM key) {
 
 void GameFramework::on_render(HWND hwnd) {
 	HDC surface_app = BeginPaint(hwnd, &painter);
-	HDC surface_double = CreateCompatibleDC(surface_app);
 
-	// 메인 DC 그리기 부분
-	auto m_hBit = CreateCompatibleBitmap(surface_app, VIEW_W, VIEW_H);
-	auto m_oldhBit = (HBITMAP)SelectObject(surface_double, m_hBit);
+	HDC surface_double = CreateCompatibleDC(surface_app);
+	HBITMAP m_hBit = CreateCompatibleBitmap(surface_app, view_width, view_height);
+	HBITMAP m_oldhBit = (HBITMAP)SelectObject(surface_double, m_hBit);
 
 	// 초기화
-	auto m_hPen = CreatePen(PS_NULL, 1, background_color);
-	auto m_oldhPen = (HPEN)SelectObject(surface_double, m_hPen);
-	auto m_hBR = CreateSolidBrush(background_color);
-	auto m_oldhBR = (HBRUSH)SelectObject(surface_double, m_hBR);
-	Render::draw_rectangle(surface_double, 0, 0, VIEW_W, VIEW_H);
-	Render::draw_end(surface_double, m_oldhBR, m_hBR);
-	Render::draw_end(surface_double, m_oldhPen, m_hPen);
+	Render::draw_clear(surface_double, view_width, view_height, background_color);
 
 	HDC surface_back = CreateCompatibleDC(surface_app);
-	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, PORT_W, PORT_H);
+	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, view_width, view_height);
 	HBITMAP m_newoldBit = (HBITMAP)SelectObject(surface_back, m_newBit);
 
 	// 파이프라인
@@ -114,12 +112,12 @@ void GameFramework::on_render(HWND hwnd) {
 	}
 
 	// 이중 버퍼 -> 백 버퍼
-	BitBlt(surface_back, 0, 0, VIEW_W, VIEW_H, surface_double, 0, 0, SRCCOPY);
+	BitBlt(surface_back, 0, 0, view_width, view_height, surface_double, 0, 0, SRCCOPY);
 	Render::draw_end(surface_double, m_oldhBit, m_hBit);
 
 	// 백 버퍼 -> 화면 버퍼
-	StretchBlt(surface_app, 0, 0, PORT_W, PORT_H, surface_back
-			   , 0, 0, VIEW_W, VIEW_H, SRCCOPY);
+	StretchBlt(surface_app, screen_x, screen_y, port_width, port_height
+			   , surface_back, 0, 0, view_width, view_height, SRCCOPY);
 	Render::draw_end(surface_back, m_newoldBit, m_newBit);
 
 	DeleteDC(surface_back);
