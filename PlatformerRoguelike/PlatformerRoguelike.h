@@ -18,7 +18,16 @@ constexpr int TILE_IMAX = (VIEW_W / 16);
 constexpr int TILE_JMAX = (VIEW_H / 16) + 1;
 
 class oGraviton : public GameInstance {
+public:
+	virtual void on_update(double frame_advance);
 
+
+
+	void force(double speed, double direction);
+	void accel(double speed, double direction);
+
+	double hspeed, vspeed;
+	double gravity;
 };
 
 class oPlayer : public oGraviton {

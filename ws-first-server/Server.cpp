@@ -19,7 +19,7 @@ void print_receive(int progress, int size) {
 	int percent = (int)((double)progress / (double)size) * 100;
 
 	char info_text[INFO_LENGTH];
-	sprintf_s(info_text, INFO_LENGTH, "파일 (%s) 전송 중: \n", RECV_FILENAME);
+	sprintf_s(info_text, INFO_LENGTH, "데이터 수신 중: \n");
 
 	char info_percentage[100];
 	sprintf_s(info_percentage, 100, "전송률: %d%% (%d/%d)\n", percent, progress, size);
@@ -73,7 +73,7 @@ int receive_packet(SOCKET socket, char*& buffer, int flags) {
 	}
 
 	buffer[buffer_length] = '\0';
-	printf("\n[TCP 서버] 수신 완료 (크기: %d): %s\n", buffer_length, RECV_FILENAME);
+	printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", buffer_length);
 
 	return buffer_length;
 }
@@ -127,8 +127,6 @@ int main(void) {
 			err_quit("file_path");
 			break;
 		}
-		RECV_FILENAME = new char[result + 1];
-		strcpy_s(RECV_FILENAME, result, file_path);
 
 		// 파일 내용
 		result = receive_packet(client_socket, file_buffer, 0);

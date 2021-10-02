@@ -67,9 +67,7 @@ int main(void) {
 		fseek(myfile, 0, SEEK_SET);
 		file_buffer = new char[file_size];
 
-		while (!feof(myfile)) {
-			fread(file_buffer, file_size, 1, myfile);
-		}
+		fread(file_buffer, file_size, 1, myfile);
 
 		fclose(myfile);
 	} else {
@@ -82,55 +80,6 @@ int main(void) {
 	
 	result = send_packet(mysocket, (char*)(file_buffer), file_size, 0);
 	printf("\n[TCP 클라이언트] 파일 버퍼로 %d 바이트를 보냈습니다.\n", result);
-
-	/*
-	ifstream file_reader(file_path, ios::binary);
-	if (file_reader) {
-		// seekg를 이용한 파일 크기 추출
-		file_reader.seekg(0, file_reader.end);
-		file_size = file_reader.tellg();
-		file_reader.seekg(0, file_reader.beg);
-
-		file_buffer = new char[file_size + 1];
-
-		file_reader.read(file_buffer, file_size);
-		file_reader.close();
-	} else {
-		err_quit("fopen");
-	}
-
-	// 파일 이름
-	char *buffer = (char*)(file_path);
-	u_long buffer_length = strlen(file_path);
-
-	result = send(mysocket, (char*)(&buffer_length), sizeof(u_long), 0);
-	if (SOCKET_ERROR == result) {
-		err_quit("send 1");
-	}
-
-	result = send(mysocket, buffer, buffer_length, 0);
-	if (SOCKET_ERROR == result) {
-		err_quit("send 2");
-	}
-
-	printf("\n[TCP 클라이언트] 파일 이름으로 %d 바이트를 보냈습니다.\n", buffer_length);
-	
-	// 파일 내용
-	buffer = (char*)(file_buffer);
-	buffer_length = (u_long)(file_size);
-
-	result = send(mysocket, (char*)(&buffer_length), sizeof(u_long), 0);
-	if (SOCKET_ERROR == result) {
-		err_quit("send 3");
-	}
-
-	result = send(mysocket, buffer, buffer_length, 0);
-	if (SOCKET_ERROR == result) {
-		err_quit("send 4");
-	}
-
-	printf("\n[TCP 클라이언트] 파일 버퍼로 %d 바이트를 보냈습니다.\n", buffer_length);
-	//*/
 
 	closesocket(mysocket);
 

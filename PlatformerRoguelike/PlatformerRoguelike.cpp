@@ -31,7 +31,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	framework.make_scene<sceneGame>();
-	framework.background_color = COLOR_GREY;
 
 	framework.init();
 
@@ -56,6 +55,7 @@ void sceneGame::on_create() {
 	map_blend.BlendFlags = 0;
 	map_blend.AlphaFormat = AC_SRC_ALPHA;
 	//framework.background_color = 0;
+	framework.background_color = COLOR_GREY;
 
 	build_terrain = new char*[TILE_JMAX];
 	for (int j = 0; j < TILE_JMAX; ++j) {
