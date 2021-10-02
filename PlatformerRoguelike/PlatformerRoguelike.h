@@ -17,14 +17,27 @@ constexpr double GRAVITY = km_per_hr(200.0);
 constexpr int TILE_IMAX = (VIEW_W / 16);
 constexpr int TILE_JMAX = (VIEW_H / 16) + 1;
 
+enum class StaticDir {
+	RIGHT = 0
+	, LEFT = 180
+	, UP = 90
+	, DOWN = 270
+};
+
+class GameWorld {
+public:
+	GameWorld();
+	~GameWorld();
+
+
+};
+
 class oGraviton : public GameInstance {
 public:
 	virtual void on_update(double frame_advance);
 
-
-
-	void force(double speed, double direction);
-	void accel(double speed, double direction);
+	//void force(double speed, double direction);
+	double raycast(double distance, StaticDir direction);
 
 	double hspeed, vspeed;
 	double gravity;
@@ -49,7 +62,11 @@ public:
 	virtual void on_update(double frame_advance);
 	virtual void on_render(HDC canvas);
 
+
 	unsigned long score = 0;
+
+	GameWorld world;
+
 
 	char** build_doodad_above;
 	char** build_player;

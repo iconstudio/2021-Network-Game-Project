@@ -49,6 +49,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+void oGraviton::on_update(double frame_advance) {}
+
+double oGraviton::raycast(double distance, StaticDir direction) {
+	return 0.0;
+}
+
+GameWorld::GameWorld() {}
+
+GameWorld::~GameWorld() {}
+
 void sceneGame::on_create() {
 	map_blend.SourceConstantAlpha = 255;
 	map_blend.BlendOp = AC_SRC_OVER;
@@ -108,8 +118,7 @@ void sceneGame::on_create() {
 				switch (block_data) {
 					case '@':
 					{
-						pp = instance_create<GameInstance>(cx + 8.0, cy + 8.0);
-						pp->set_sprite(sPlayer);
+						pp = instance_create<oPlayer>(cx + 8.0, cy + 8.0);
 					}
 					break;
 
