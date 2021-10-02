@@ -4,7 +4,7 @@
 
 class GameSprite;
 class GameFramework;
-class GameWorld;
+class GameWorldMesh;
 
 class GameScene;
 class sceneTitle;

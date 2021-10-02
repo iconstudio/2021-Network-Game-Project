@@ -4,15 +4,11 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <fstream>
-using namespace std;
 
-#define SERVER_IP "127.0.0.1"
-//#define SERVER_IP "172.30.1.11"
-
+//#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "172.30.1.11"
 #define SERVER_PORT 9000
 #define PATH_SIZE 512
-
 
 void err_quit(const char* msg);
 
@@ -55,7 +51,7 @@ int main(void) {
 	long file_size = 0;
 	char* file_buffer = nullptr;
 
-	printf("[TCP 클라이언트] 접속 - %s\n", SERVER_IP);
+	printf("[TCP 클라이언트] 접속 IP 주소 - %s\n", SERVER_IP);
 	printf("보낼 파일 이름> ");
 	scanf_s("%s", &file_path, PATH_SIZE);
 	file_path[PATH_SIZE - 1] = '\0';

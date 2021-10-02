@@ -44,9 +44,9 @@ public:
 	virtual void on_render(HDC canvas);
 	void reset();
 
-	template<class _GObj>
-	auto instance_create(double x, double y) {
-		auto lptr = new _GObj(x, y);
+	template<class _GObj, typename ...Ty>
+	auto instance_create(Ty... args) {
+		_GObj* lptr = new _GObj(args...);
 		lptr->room = this;
 
 		auto result = shared_ptr<GameInstance>(lptr);

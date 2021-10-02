@@ -4,16 +4,12 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <fstream>
-using namespace std;
 
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
 
 void err_quit(const char* msg);
 void err_display(const char* msg);
-
-char* RECV_FILENAME = nullptr;
 
 void print_receive(int progress, int size) {
 	int percent = ((double)progress / (double)size) * 100;
@@ -115,7 +111,7 @@ int main(void) {
 
 		char* client_ipv4 = inet_ntoa(client_address.sin_addr);
 		u_short client_port = ntohs(client_address.sin_port);
-		printf("\n[TCP 서버] 클라이언트 접속 - IP 주소: %s, 포트 번호 = %d\n"
+		printf("\n[TCP 서버] 클라이언트 접속 - IP 주소: %s, 포트 번호: %d\n"
 			   , client_ipv4, client_port);
 
 		char* file_path = nullptr;
@@ -123,8 +119,6 @@ int main(void) {
 		char* file_buffer = nullptr;
 		int file_buffer_length = 0;
 
-		//result = receive_packet(client_socket, file_path, 0);
-		//result = receive_packet(client_socket, file_buffer, 0);
 		while (true) {
 			// 파일 이름
 			result = recvn(client_socket, (char*)(&file_path_length), sizeof(int), 0);
@@ -164,9 +158,11 @@ int main(void) {
 			} else if (0 == result) {
 				break;
 			}
+
+			printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", file_buffer_length);
 		}
 
-		printf("\n[TCP 서버] 클라이언트 종료 - IP 주소: %s, 포트 번호 = %d\n", client_ipv4, client_port);
+		printf("\n[TCP 서버] 클라이언트 종료 - IP 주소: %s, 포트 번호: %d\n", client_ipv4, client_port);
 
 		if (file_path && file_buffer) {
 			FILE* myfile = fopen(file_path, "wb");
