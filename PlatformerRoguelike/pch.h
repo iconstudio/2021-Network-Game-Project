@@ -32,10 +32,6 @@ constexpr double km_per_hr(const double velocity) {
 	return velocity * kph_to_pps;
 }
 
-constexpr double GRAVITY = km_per_hr(200.0);
-constexpr double PLAYER_JUMP_VELOCITY = km_per_hr(60.0);
-constexpr int TILE_IMAX = (VIEW_W / 16);
-constexpr int TILE_JMAX = (VIEW_H / 16) + 1;
 
 namespace Render {
 void refresh(HWND hwnd);

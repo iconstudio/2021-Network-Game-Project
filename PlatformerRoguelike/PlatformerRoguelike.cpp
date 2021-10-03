@@ -63,7 +63,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
-oGraviton::oGraviton(GameWorldMesh* newmesh, double x, double y)
+oGraviton::oGraviton(double x, double y, GameWorldMesh* newmesh)
 	: GameInstance(x, y), worldmesh(newmesh)
 	, gravity(GRAVITY) {}
 
@@ -192,8 +192,8 @@ void oGraviton::jump(double power) {
 	vspeed = -power;
 }
 
-oPlayer::oPlayer(GameWorldMesh* newmesh, double x, double y)
-	: oGraviton(newmesh, x, y), imxs(StaticDir::RIGHT)
+oPlayer::oPlayer(double x, double y, GameWorldMesh* newmesh)
+	: oGraviton(x, y, newmesh), imxs(StaticDir::RIGHT)
 	, attack_cooldown(0.0), attack_combo_time(0.0), attack_count(0) {
 	set_sprite(sPlayer);
 }
@@ -228,20 +228,16 @@ void oPlayer::on_update(double frame_advance) {
 	}
 	
 	if (check_attack && attack_cooldown <= 0.0) {
-		double shx = x + lengthdir_x(3, (int)imxs);
-		auto shoot = room->instance_create<oPlayerBullet>(worldmesh, shx, y - 2);
-		shoot->hspeed = 20.0;
 		attack_count = attack_count_max;
-		attack_cooldown = attack_period;
 	}
 
-	/*
 	if (0 < attack_combo_time) {
 		attack_combo_time -= frame_advance;
 	} else if (0 < attack_count) {
-		double shx = x + lengthdir_x(3, (int)imxs);
-		auto shoot = room->instance_create<oPlayerBullet>(worldmesh, shx, y - 2);
-		shoot->hspeed = 20.0;
+		double shdir = (int)imxs;
+		double shx = x + shdir * 3;
+		auto shoot = room->instance_create<oPlayerBullet>(shx, y - 2, worldmesh);
+		shoot->hspeed = BULLET_VELOCITY * shdir;
 
 		if (0 < attack_count) {
 			attack_combo_time = attack_combo_period;
@@ -249,21 +245,20 @@ void oPlayer::on_update(double frame_advance) {
 		} else {
 			attack_cooldown = attack_period;
 		}
-	}*/
-
-	if (0 < attack_cooldown)
+	} else if (0 < attack_cooldown) {
 		attack_cooldown -= frame_advance;
+	}
 
 	oGraviton::on_update(frame_advance);
 }
 
-oPlayerBullet::oPlayerBullet(GameWorldMesh* newmesh, double x, double y)
-	: oGraviton(newmesh, x, y) {
+oPlayerBullet::oPlayerBullet(double x, double y, GameWorldMesh* newmesh)
+	: oGraviton(x, y, newmesh) {
 	set_sprite(sBullet);
 	gravity = 0.0;
 }
 
-GameWorldMesh::GameWorldMesh(GameScene* room) : my_room(room) {
+GameWorldMesh::GameWorldMesh(sceneGame* room) : my_room(room) {
 	map_blend.SourceConstantAlpha = 255;
 	map_blend.BlendOp = AC_SRC_OVER;
 	map_blend.BlendFlags = 0;
@@ -289,9 +284,13 @@ void GameWorldMesh::load(const char* mapfile) {
 
 			if (ch != '\n') { // \n 버리기.
 				build_terrain.push_back(new GameMeshPiece(ch));
+				++j;
 			}
 			//fread(build_terrain[j], sizeof(char), TILE_IMAX, myfile);
 		}
+
+		if (j < build_terrain.size())
+			throw std::exception("Invalid map file.");
 
 		fclose(myfile);
 	} else {
@@ -320,14 +319,14 @@ void GameWorldMesh::build() {
 	for (const auto& tile : build_terrain) {
 		const char data = tile->data;
 
-		if (data != '0') {
+		if (data != TILES::NONE) {
 			cx = 16.0 * (i - floor(i / TILE_IMAX) * TILE_IMAX);
 			cy = 16.0 * floor(i / TILE_IMAX);
 
 			switch (data) {
 				case TILES::PLAYER:
 				{
-					auto pp = my_room->instance_create<oPlayer>(this, cx + 8.0, cy + 8.0);
+					auto pp = my_room->instance_create<oPlayer>(cx + 8.0, cy + 8.0, this);
 				}
 				break;
 
@@ -379,22 +378,10 @@ void GameWorldMesh::build() {
 }
 
 void GameWorldMesh::clear() {
-	for (int j = 0; j < TILE_JMAX; ++j) {
-		if (build_backtile[j])
-			delete[] build_backtile[j];
-		if (build_doodads[j])
-			delete[] build_doodads[j];
-		if (build_instances[j])
-			delete[] build_instances[j];
-	}
-
-	if (build_backtile)
-		delete[] build_backtile;
+	build_backtile.clear();
 	build_terrain.clear();
-	if (build_doodads)
-		delete[] build_doodads;
-	if (build_instances)
-		delete[] build_instances;
+	build_doodads.clear();
+	build_instances.clear();
 }
 
 void GameWorldMesh::reset() {

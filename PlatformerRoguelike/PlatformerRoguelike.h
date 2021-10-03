@@ -15,37 +15,43 @@ enum TILES : char {
 };
 
 enum class StaticDir : int {
-	RIGHT = 0
-	, LEFT = 180
-	, UP = 90
-	, DOWN = 270
+	RIGHT = 1
+	, LEFT = -1
+	, UP = -1
+	, DOWN = 1
 };
+
+constexpr int TILE_IMAX = (VIEW_W / 16);
+constexpr int TILE_JMAX = (VIEW_H / 16) + 1;
+constexpr double GRAVITY = km_per_hr(200.0);
+constexpr double PLAYER_JUMP_VELOCITY = km_per_hr(60.0);
+constexpr double BULLET_VELOCITY = km_per_hr(50.0);
 
 class oGraviton : public GameInstance {
 public:
-	oGraviton(GameWorldMesh* newmesh, double x, double y);
+	oGraviton(double x, double y, GameWorldMesh* newmesh);
 
 	virtual void on_create();
 	virtual void on_update(double frame_advance);
 
 	void set_worldmesh(GameWorldMesh* newworld);
+
 	double raycast_lt(double distance);
 	double raycast_rt(double distance);
 	double raycast_up(double distance);
 	double raycast_dw(double distance);
 
-	void jump(double power);
+	virtual void jump(double power);
 
 	double gravity;
-	GameWorldMesh* worldmesh;
 
-protected:
 	sceneGame* system;
+	GameWorldMesh* worldmesh;
 };
 
 class oPlayer : public oGraviton {
 public:
-	oPlayer(GameWorldMesh* newmesh, double x, double y);
+	oPlayer(double x, double y, GameWorldMesh* newmesh);
 
 	virtual void on_create();
 	virtual void on_update(double frame_advance);
@@ -65,7 +71,49 @@ public:
 
 class oPlayerBullet : public oGraviton {
 public:
-	oPlayerBullet(GameWorldMesh* newmesh, double x, double y);
+	oPlayerBullet(double x, double y, GameWorldMesh* newmesh);
+};
+
+class GameMeshPiece {
+public:
+	GameMeshPiece();
+	GameMeshPiece(const char ch);
+	explicit operator char() const;
+	GameMeshPiece& operator=(const char ch);
+	bool operator==(const char ch) const;
+
+	char data;
+};
+
+class GameWorldMesh {
+public:
+	GameWorldMesh(sceneGame* room);
+	~GameWorldMesh();
+
+	void load(const char* mapfile);
+	void build();
+	void clear();
+	void reset();
+
+	GameMeshPiece* get_terrain(int ix, int iy) const;
+	GameMeshPiece* place_terrain(double cx, double cy);
+	bool place_free(double cx, double cy);
+	bool place_throughable(double cx, double cy);
+	bool place_collider(double cx, double cy);
+
+	void on_render(HDC canvas);
+
+private:
+	sceneGame* my_room;
+
+	HDC map_surface;
+	HBITMAP map_bitmap;
+	BLENDFUNCTION map_blend;
+
+	vector<GameMeshPiece*> build_instances;
+	vector<GameMeshPiece*> build_doodads;
+	vector<GameMeshPiece*> build_terrain;
+	vector<GameMeshPiece*> build_backtile;
 };
 
 class sceneGame : public GameScene {
