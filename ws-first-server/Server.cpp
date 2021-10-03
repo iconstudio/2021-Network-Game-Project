@@ -4,8 +4,6 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <fstream>
-using namespace std;
 
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
@@ -13,10 +11,8 @@ using namespace std;
 void err_quit(const char* msg);
 void err_display(const char* msg);
 
-char* RECV_FILENAME = nullptr;
-
 void print_receive(int progress, int size) {
-	int percent = (int)((double)progress / (double)size) * 100;
+	int percent = ((double)progress / (double)size) * 100;
 
 	char info_text[INFO_LENGTH];
 	sprintf_s(info_text, INFO_LENGTH, "데이터 수신 중: \n");
@@ -51,9 +47,9 @@ int recvn(SOCKET sock, char* buffer, int length, int flags) {
 	return (length - left);
 }
 
-int receive_packet(SOCKET socket, char*& buffer, int flags) {
+int receive_packet(SOCKET sock, char*& buffer, int flags) {
 	int buffer_length = 0;
-	int result = recvn(socket, (char*)(&buffer_length), sizeof(int), flags);
+	int result = recvn(sock, (char*)(&buffer_length), sizeof(int), flags);
 	if (SOCKET_ERROR == result) {
 		err_display("recvn 1");
 		return 0;
@@ -64,7 +60,7 @@ int receive_packet(SOCKET socket, char*& buffer, int flags) {
 	print_receive(0, buffer_length);
 
 	buffer = new char[buffer_length + 1];
-	result = recvn(socket, buffer, buffer_length, flags);
+	result = recvn(sock, buffer, buffer_length, flags);
 	if (SOCKET_ERROR == result) {
 		err_display("recvn 2");
 		return 0;
@@ -97,7 +93,7 @@ int main(void) {
 	int result = bind(listener, (SOCKADDR*)(&server_address), sizeof(server_address));
 	if (SOCKET_ERROR == result) err_quit("bind");
 
-	result = listen(listener, SOMAXCONN); // 받을 수 있는 큐 크기
+	result = listen(listener, SOMAXCONN);
 	if (SOCKET_ERROR == result) err_quit("listen");
 
 	SOCKET client_socket;
@@ -115,35 +111,69 @@ int main(void) {
 
 		char* client_ipv4 = inet_ntoa(client_address.sin_addr);
 		u_short client_port = ntohs(client_address.sin_port);
-		printf("\n[TCP 서버] 클라이언트 접속 - IP 주소: %s, 포트 번호 = %d\n"
+		printf("\n[TCP 서버] 클라이언트 접속 - IP 주소: %s, 포트 번호: %d\n"
 			   , client_ipv4, client_port);
 
 		char* file_path = nullptr;
+		int file_path_length = 0;
 		char* file_buffer = nullptr;
+		int file_buffer_length = 0;
 
-		// 파일 이름
-		result = receive_packet(client_socket, file_path, 0);
-		if (0 == result) {
-			err_quit("file_path");
-			break;
+		while (true) {
+			// 파일 이름
+			result = recvn(client_socket, (char*)(&file_path_length), sizeof(int), 0);
+			if (SOCKET_ERROR == result) {
+				err_display("recvn 1");
+				break;
+			} else if (0 == result) {
+				break;
+			}
+
+			file_path = new char[file_path_length + 1];
+			result = recvn(client_socket, file_path, file_path_length, 0);
+			if (SOCKET_ERROR == result) {
+				err_display("recvn 2");
+				break;
+			} else if (0 == result) {
+				break;
+			}
+
+			file_path[file_path_length] = '\0';
+			printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", file_path_length);
+
+			// 파일 내용
+			result = recvn(client_socket, (char*)(&file_buffer_length), sizeof(int), 0);
+			if (SOCKET_ERROR == result) {
+				err_display("recvn 3");
+				break;
+			} else if (0 == result) {
+				break;
+			}
+
+			file_buffer = new char[file_buffer_length + 1];
+			result = recvn(client_socket, file_buffer, file_buffer_length, 0);
+			if (SOCKET_ERROR == result) {
+				err_display("recvn 4");
+				break;
+			} else if (0 == result) {
+				break;
+			}
+
+			printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", file_buffer_length);
 		}
 
-		// 파일 내용
-		result = receive_packet(client_socket, file_buffer, 0);
-		if (0 == result) {
-			err_quit("file_buffer");
-			break;
+		printf("\n[TCP 서버] 클라이언트 종료 - IP 주소: %s, 포트 번호: %d\n", client_ipv4, client_port);
+
+		if (file_path && file_buffer) {
+			FILE* myfile = fopen(file_path, "wb");
+			if (myfile) {
+				fwrite(file_buffer, file_buffer_length, 1, myfile);
+				fclose(myfile);
+			} else {
+				err_quit("fopen");
+			}
 		}
 
-		FILE* myfile = fopen(file_path, "wb");
-		if (myfile) {
-			fwrite(file_buffer, result, 1, myfile);
-			fclose(myfile);
-		} else {
-			err_quit("fopen");
-		}
-
-		printf("\n[TCP 서버] 클라이언트 종료 - IP 주소: %s, 포트 번호 = %d\n", client_ipv4, client_port);
 		closesocket(client_socket);
 	}
 	closesocket(listener);

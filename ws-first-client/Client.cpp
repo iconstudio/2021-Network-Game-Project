@@ -4,15 +4,11 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
-#include <fstream>
-using namespace std;
 
-#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "172.30.1.11"
 #define SERVER_PORT 9000
 #define PATH_SIZE 512
-#define BUFFER_TYPE_FILEPATH 1
-#define BUFFER_TYPE_FILEDATA 2
-
 
 void err_quit(const char* msg);
 
@@ -55,7 +51,7 @@ int main(void) {
 	long file_size = 0;
 	char* file_buffer = nullptr;
 
-	printf("[TCP 클라이언트 실행]\n");
+	printf("[TCP 클라이언트] 접속 IP 주소 - %s\n", SERVER_IP);
 	printf("보낼 파일 이름> ");
 	scanf_s("%s", &file_path, PATH_SIZE);
 	file_path[PATH_SIZE - 1] = '\0';
@@ -74,7 +70,6 @@ int main(void) {
 		err_quit("fopen");
 	}
 
-	//
 	result = send_packet(mysocket, file_path, strlen(file_path), 0);
 	printf("\n[TCP 클라이언트] 파일 이름으로 %d 바이트를 보냈습니다.\n", result);
 	
