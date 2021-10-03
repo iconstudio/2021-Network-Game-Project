@@ -14,7 +14,7 @@ auto sBall = framework.make_sprite(TEXT("Resources\\ball.png"), 1, 32, 32);
 auto sBlock = framework.make_sprite(TEXT("Resources\\blockpurple.png"), 1, 0, 0);
 auto sPlate = framework.make_sprite(TEXT("Resources\\plate.png"), 1, 0, 0);
 auto sPlayer = framework.make_sprite(TEXT("Resources\\player.png"), 1, 6, 6);
-
+auto sBullet = framework.make_sprite(TEXT("Resources\\bullet.png"), 1, 2, 2);
 
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -39,6 +39,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	framework.input_register(VK_SPACE);
 	framework.input_register(VK_RETURN);
 	framework.input_register('R');
+	framework.input_register('Z');
+	framework.input_register('X');
 
 	framework.input_register(VK_F1); // 도움말
 	framework.input_register(VK_F2); // 게임 전체 다시 시작
@@ -62,12 +64,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 oGraviton::oGraviton(GameWorldMesh* newmesh, double x, double y)
-	: GameInstance(x, y), worldmesh(newmesh) {}
+	: GameInstance(x, y), worldmesh(newmesh)
+	, gravity(GRAVITY) {}
 
 void oGraviton::on_create() {
-	hspeed = 0.0;
-	vspeed = 0.0;
-	gravity = GRAVITY;
 }
 
 void oGraviton::on_update(double frame_advance) {
@@ -166,17 +166,20 @@ double oGraviton::raycast_dw(double distance) {
 			break;
 		}
 
-		bool self_in = worldmesh->place_throughable(x, y);
-		auto self_check = worldmesh->place_terrain(x, y);
+		bool self_pt = worldmesh->place_throughable(x, y);
 		auto bot_check = worldmesh->place_terrain(x, by);
+		auto bot_pt = worldmesh->place_throughable(lx, by) || worldmesh->place_throughable(rx, by);
 		auto next_check = worldmesh->place_terrain(x, y + 16);
+		auto next_pt = worldmesh->place_throughable(lx, y + 16) || worldmesh->place_throughable(rx, y + 16);
 
-		if (!self_check) {
-			if (worldmesh->place_throughable(lx, by) || worldmesh->place_throughable(rx, by))
+		if (!self_pt && bot_pt) {
+			if (bot_check == next_check) {
 				break;
-		} else if (self_in) {
-			if (next_check && self_check != next_check)
+			}
+		} else if (self_pt && bot_pt) {
+			if (bot_check == next_check) {
 				break;
+			}
 		}
 		y++;
 		move_distance--;
@@ -190,7 +193,8 @@ void oGraviton::jump(double power) {
 }
 
 oPlayer::oPlayer(GameWorldMesh* newmesh, double x, double y)
-	: oGraviton(newmesh, x, y) {
+	: oGraviton(newmesh, x, y), imxs(StaticDir::RIGHT)
+	, attack_cooldown(0.0), attack_combo_time(0.0), attack_count(0) {
 	set_sprite(sPlayer);
 }
 
@@ -207,17 +211,56 @@ void oPlayer::on_update(double frame_advance) {
 	bool check_jump = framework.input_check_pressed(VK_SPACE);
 	bool check_jump_cnt = framework.input_check(VK_SPACE);
 
+	bool check_attack = framework.input_check_pressed('Z');
+
 	int check_hor = (check_right - check_left);
 
-	//if (0 != check_hor) {
 	hspeed = check_hor * 10.0;
-	//}
+
+	if (-1 == check_hor) {
+		imxs = StaticDir::LEFT;
+	} else if (1 == check_hor) {
+		imxs = StaticDir::RIGHT;
+	}
 
 	if (check_jump) {
 		jump(PLAYER_JUMP_VELOCITY);
 	}
+	
+	if (check_attack && attack_cooldown <= 0.0) {
+		double shx = x + lengthdir_x(3, (int)imxs);
+		auto shoot = room->instance_create<oPlayerBullet>(worldmesh, shx, y - 2);
+		shoot->hspeed = 20.0;
+		attack_count = attack_count_max;
+		attack_cooldown = attack_period;
+	}
+
+	/*
+	if (0 < attack_combo_time) {
+		attack_combo_time -= frame_advance;
+	} else if (0 < attack_count) {
+		double shx = x + lengthdir_x(3, (int)imxs);
+		auto shoot = room->instance_create<oPlayerBullet>(worldmesh, shx, y - 2);
+		shoot->hspeed = 20.0;
+
+		if (0 < attack_count) {
+			attack_combo_time = attack_combo_period;
+			attack_count--;
+		} else {
+			attack_cooldown = attack_period;
+		}
+	}*/
+
+	if (0 < attack_cooldown)
+		attack_cooldown -= frame_advance;
 
 	oGraviton::on_update(frame_advance);
+}
+
+oPlayerBullet::oPlayerBullet(GameWorldMesh* newmesh, double x, double y)
+	: oGraviton(newmesh, x, y) {
+	set_sprite(sBullet);
+	gravity = 0.0;
 }
 
 GameWorldMesh::GameWorldMesh(GameScene* room) : my_room(room) {
@@ -245,7 +288,7 @@ void GameWorldMesh::load(const char* mapfile) {
 			ch = fgetc(myfile);
 
 			if (ch != '\n') { // \n 버리기.
-				build_terrain.push_back(new MeshPiece(ch));
+				build_terrain.push_back(new GameMeshPiece(ch));
 			}
 			//fread(build_terrain[j], sizeof(char), TILE_IMAX, myfile);
 		}
@@ -359,7 +402,7 @@ void GameWorldMesh::reset() {
 	build();
 }
 
-MeshPiece* GameWorldMesh::get_terrain(int ix, int iy) const {
+GameMeshPiece* GameWorldMesh::get_terrain(int ix, int iy) const {
 	if (0 <= ix && 0 <= iy && ix < TILE_IMAX && iy < TILE_JMAX) {
 		return build_terrain.at(ix + iy * TILE_IMAX);
 	} else {
@@ -367,23 +410,19 @@ MeshPiece* GameWorldMesh::get_terrain(int ix, int iy) const {
 	}
 }
 
-MeshPiece* GameWorldMesh::place_terrain(double cx, double cy) {
+GameMeshPiece* GameWorldMesh::place_terrain(double cx, double cy) {
 	int tx = floor(cx / 16);
 	int ty = floor(cy / 16);
 	return get_terrain(tx, ty);
 }
 
 bool GameWorldMesh::place_free(double cx, double cy) {
-	int tx = floor(cx / 16);
-	int ty = floor(cy / 16);
-	int check = get_terrain(tx, ty)->data;
+	char check = place_terrain(cx, cy)->data;
 	return (check != TILES::BLOCK);
 }
 
 bool GameWorldMesh::place_throughable(double cx, double cy) {
-	int tx = floor(cx / 16);
-	int ty = floor(cy / 16);
-	int check = get_terrain(tx, ty)->data;
+	char check = place_terrain(cx, cy)->data;
 	return (check == TILES::PLATE);
 }
 
@@ -419,22 +458,22 @@ void sceneGame::on_render(HDC canvas) {
 	GameScene::on_render(canvas);
 }
 
-MeshPiece::MeshPiece() : data('0') {}
+GameMeshPiece::GameMeshPiece() : data('0') {}
 
-MeshPiece::MeshPiece(const char ch) {
+GameMeshPiece::GameMeshPiece(const char ch) {
 	data = ch;
 }
 
-MeshPiece::operator char() const {
+GameMeshPiece::operator char() const {
 	return data;
 }
 
-MeshPiece& MeshPiece::operator=(const char ch) {
+GameMeshPiece& GameMeshPiece::operator=(const char ch) {
 	data = ch;
 	return *this;
 }
 
-bool MeshPiece::operator==(const char ch) const {
+bool GameMeshPiece::operator==(const char ch) const {
 	return (data == ch);
 }
 

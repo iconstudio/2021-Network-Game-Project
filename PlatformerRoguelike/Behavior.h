@@ -29,7 +29,9 @@ public:
 	double image_xscale, image_yscale, image_angle, image_alpha;
 	double x, y; // 좌표
 
-	GameScene* room = nullptr; // 소속 장면
+	double hspeed, vspeed;
+
+	GameScene* room; // 소속 장면
 };
 
 // 장면 컴포넌트
@@ -49,16 +51,15 @@ public:
 		_GObj* lptr = new _GObj(args...);
 		lptr->room = this;
 
-		auto result = shared_ptr<GameInstance>(lptr);
-		instances.emplace_back(result);
+		instances.push_back(lptr);
 
-		return result;
+		return lptr;
 	}
 
 	template<class _GObj>
 	inline void instance_kill(_GObj* target) {
-		auto loc = find_if(instances.begin(), instances.end(), [target](shared_ptr<GameInstance>& lhs) {
-			return (lhs.get() == target);
+		auto loc = find_if(instances.begin(), instances.end(), [target](const auto& lhs) {
+			return (lhs == target);
 		});
 
 		if (loc != instances.end()) {
@@ -69,5 +70,48 @@ public:
 
 	friend class GameInstance;
 	bool done;
-	vector<shared_ptr<GameInstance>> instances;
+	vector<GameInstance*> instances;
+};
+
+
+class GameMeshPiece {
+public:
+	GameMeshPiece();
+	GameMeshPiece(const char ch);
+	explicit operator char() const;
+	GameMeshPiece& operator=(const char ch);
+	bool operator==(const char ch) const;
+
+	char data;
+};
+
+class GameWorldMesh {
+public:
+	GameWorldMesh(GameScene* room);
+	~GameWorldMesh();
+
+	void load(const char* mapfile);
+	void build();
+	void clear();
+	void reset();
+
+	GameMeshPiece* get_terrain(int ix, int iy) const;
+	GameMeshPiece* place_terrain(double cx, double cy);
+	bool place_free(double cx, double cy);
+	bool place_throughable(double cx, double cy);
+	bool place_collider(double cx, double cy);
+
+	void on_render(HDC canvas);
+
+private:
+	GameScene* my_room;
+
+	HDC map_surface;
+	HBITMAP map_bitmap;
+	BLENDFUNCTION map_blend;
+	GameMeshPiece** build_instances;
+	GameMeshPiece** build_doodads;
+
+	vector<GameMeshPiece*> build_terrain;
+	GameMeshPiece** build_backtile;
 };

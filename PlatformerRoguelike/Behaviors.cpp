@@ -4,11 +4,15 @@
 
 GameInstance::GameInstance(double x, double y)
 	: x(x), y(y), image_index(0), image_speed(0), box {0, 0, 1, 1}
-	, image_xscale(1), image_yscale(1), image_angle(0), image_alpha(1) {}
+	, image_xscale(1), image_yscale(1), image_angle(0), image_alpha(1)
+	, hspeed(0.0), vspeed(0.0)
+	, room(nullptr) {}
 
 GameInstance::~GameInstance() {
 	if (sprite_index)
 		sprite_index.reset();
+	if (room)
+		room->instance_kill(this);
 }
 
 void GameInstance::on_create() {}
@@ -16,6 +20,9 @@ void GameInstance::on_create() {}
 void GameInstance::on_destroy() {}
 
 void GameInstance::on_update(double frame_advance) {
+	x += hspeed;
+	y += vspeed;
+
 	if (sprite_index) {
 		double animation_speed;
 		auto image_number = sprite_index->number;
@@ -84,7 +91,7 @@ void GameScene::on_create() {
 void GameScene::on_destroy() {
 	if (!instances.empty()) {
 		for (auto& instance : instances) {
-			instance.reset();
+			delete instance;
 		}
 	}
 	instances.clear();
@@ -94,6 +101,7 @@ void GameScene::on_update(double frame_advance) {
 	if (!instances.empty()) {
 		for (auto& instance : instances)
 			instance->on_update(frame_advance);
+		//for (auto it = instances.begin(); it != instances.end(); ++it) (*it)->on_update(frame_advance);
 	}
 }
 
