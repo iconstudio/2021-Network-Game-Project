@@ -7,17 +7,13 @@ class GameFramework;
 class GameWorldMesh;
 
 class GameScene;
-class sceneTitle;
-class sceneMainMenu;
-class roomStart;
-class sceneScoring;
-class sceneSetting;
+class roomGameTemplate;
 
 class GameInstance;
 class oSolid;
 
-#define CLIENT_W 800
-#define CLIENT_H 600
+#define CLIENT_W 960
+#define CLIENT_H 540
 #define VIEW_W 320
 #define VIEW_H 240
 #define PORT_W 640
@@ -40,7 +36,7 @@ void transform_set(HDC, XFORM&);
 void transform_set_identity(HDC);
 void transform_set_rotation(HDC);
 
-void draw_clear(HDC, int, int, COLORREF = 0);
+void draw_clear(HDC, int width, int height, COLORREF color = 0);
 BOOL draw_rectangle(HDC, int, int, int, int);
 void draw_end(HDC, HGDIOBJ, HGDIOBJ);
 

@@ -3,20 +3,30 @@
 #include "Sprite.h"
 
 
+enum class SPAWN_DIFFICULTY { NO, VERYEASY, EASY, NORMAL, HARD };
+
+enum class SPAWN_TYPES { NORMAL, AIR };
+
 class GameMeshPiece {
 public:
-	GameMeshPiece();
-	GameMeshPiece(const char ch);
-	explicit operator char() const;
-	GameMeshPiece& operator=(const char ch);
+	GameMeshPiece(const char ch = '0');
 	bool operator==(const char ch) const;
 
 	char data;
 };
 
+class GameSpawnPoint {
+public:
+	GameSpawnPoint(SPAWN_TYPES ctype, int cx, int cy);
+	int x, y;
+
+	SPAWN_DIFFICULTY difficulty;
+	SPAWN_TYPES type;
+};
+
 class GameWorldMesh {
 public:
-	GameWorldMesh(roomStart* room);
+	GameWorldMesh(GameScene* room);
 	~GameWorldMesh();
 
 	void load(const char* mapfile);
@@ -26,23 +36,24 @@ public:
 
 	GameMeshPiece* get_terrain(int ix, int iy) const;
 	GameMeshPiece* place_terrain(double cx, double cy);
-	bool place_free(double cx, double cy);
-	bool place_throughable(double cx, double cy);
+	bool place_solid(double cx, double cy);
+	bool place_plate(double cx, double cy);
 	bool place_collider(double cx, double cy);
 
 	void on_render(HDC canvas);
+	double playerx, playery;
 
 private:
-	roomStart* my_room;
+	GameScene* my_room;
 
 	HDC map_surface;
 	HBITMAP map_bitmap;
-	BLENDFUNCTION map_blend;
 
 	vector<GameMeshPiece*> build_instances;
 	vector<GameMeshPiece*> build_doodads;
 	vector<GameMeshPiece*> build_terrain;
 	vector<GameMeshPiece*> build_backtile;
+	vector<GameSpawnPoint*> spawns;
 };
 
 // 개체 컴포넌트
@@ -73,9 +84,12 @@ public:
 	double raycast_up(double distance);
 	double raycast_dw(double distance);
 
+	virtual void thud();
+	virtual void ceil();
+	virtual void side();
+
 	shared_ptr<GameSprite> sprite_index; // 스프라이트
 	RECT box; // 충돌체
-	GameWorldMesh* worldmesh;
 
 	double image_index, image_speed; // 애니메이션
 	double image_xscale, image_yscale, image_angle, image_alpha;
@@ -83,8 +97,10 @@ public:
 
 	double hspeed, vspeed;
 	double gravity;
+	bool in_air;
 
 	GameScene* room; // 소속 장면
+	GameWorldMesh* worldmesh;
 };
 
 // 장면 컴포넌트
@@ -123,6 +139,8 @@ public:
 	}
 	
 	bool done;
-	friend class GameInstance;
+
+	GameWorldMesh worldmesh;
+
 	vector<GameInstance*> instances;
 };

@@ -47,12 +47,12 @@ BOOL WindowsClient::initialize(HINSTANCE handle, WNDPROC procedure, LPCWSTR titl
 	properties.cbClsExtra = 0;
 	properties.cbWndExtra = 0;
 	properties.hInstance = handle;
-	properties.hIcon = LoadIcon(handle, MAKEINTRESOURCE(IDI_PLATFORMERROGUELIKE));
+	properties.hIcon = LoadIcon(handle, MAKEINTRESOURCE(131));
 	properties.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	properties.hbrBackground = CreateSolidBrush(0); //(HBRUSH)(COLOR_WINDOW + 1);
 	properties.lpszMenuName = MAKEINTRESOURCE(IDC_PLATFORMERROGUELIKE);
 	properties.lpszClassName = id;
-	properties.hIconSm = LoadIcon(properties.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	properties.hIconSm = LoadIcon(properties.hInstance, MAKEINTRESOURCE(131));
 	RegisterClassEx(&properties);
 
 

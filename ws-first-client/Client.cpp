@@ -13,7 +13,14 @@ void err_quit(const char* msg);
 
 void err_display(const char* msg);
 
+/*
+	좀 더 간편하게 고정 길이 + 가변 길이를 구현하기 위해 사용자 정의 함수 선언
+*/
 int send_packet(SOCKET socket, char* buffer, int length, int flags) {
+	/*
+		처음에 데이터의 크기 전송, 이 자체의 크기는 sizeof(int)
+		send: socket이 블로킹 소켓이고, 운영체제 송신 버퍼에 공간이 없으면..
+	*/
 	int result = send(socket, (char*)(&length), sizeof(int), flags);
 	if (SOCKET_ERROR == result) {
 		err_quit("send 1");
@@ -57,8 +64,8 @@ int main(void) {
 
 	FILE* myfile = fopen(file_path, "rb");
 	if (myfile) {
-		fseek(myfile, 0, SEEK_END);
-		file_size = ftell(myfile);
+		fseek(myfile, 0, SEEK_END); // 파일 포인터 이동
+		file_size = ftell(myfile); // 읽기 위치 반환
 		fseek(myfile, 0, SEEK_SET);
 		file_buffer = new char[file_size];
 		ZeroMemory(file_buffer, file_size);
@@ -71,10 +78,10 @@ int main(void) {
 	}
 
 	result = send_packet(mysocket, file_path, strlen(file_path), 0);
-	printf("\n[TCP 클라이언트] 파일 이름으로 %d 바이트를 보냈습니다.\n", result);
+	printf("\n[TCP 클라이언트] 파일 이름으로 %d+%d 바이트를 보냈습니다.\n", sizeof(int), result);
 	
 	result = send_packet(mysocket, (char*)(file_buffer), file_size, 0);
-	printf("\n[TCP 클라이언트] 파일 버퍼로 %d 바이트를 보냈습니다.\n", result);
+	printf("\n[TCP 클라이언트] 파일 버퍼로 %d+%d 바이트를 보냈습니다.\n", sizeof(int), result);
 
 	closesocket(mysocket);
 

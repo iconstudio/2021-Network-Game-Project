@@ -81,5 +81,14 @@
     <Image Include="Resources\blockpurple.png">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="..\..\..\..\OneDrive - 한국산업기술대학교\Programming\GameMaker\MY_GAMEs\RPG\fairune\icon128.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="..\..\..\..\onedrive - 한국산업기술대학교\programming\gamemaker\my_games\rpg\fairune\icon3.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="..\..\..\..\OneDrive - 한국산업기술대학교\Programming\GameMaker\MY_GAMEs\RPG\fairune\icon copy.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
   </ItemGroup>
 </Project>

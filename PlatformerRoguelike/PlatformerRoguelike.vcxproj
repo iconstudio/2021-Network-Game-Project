@@ -178,6 +178,9 @@
     <ResourceCompile Include="PlatformerRoguelike.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\OneDrive - 한국산업기술대학교\Programming\GameMaker\MY_GAMEs\RPG\fairune\icon copy.ico" />
+    <Image Include="..\..\..\..\OneDrive - 한국산업기술대학교\Programming\GameMaker\MY_GAMEs\RPG\fairune\icon128.ico" />
+    <Image Include="..\..\..\..\onedrive - 한국산업기술대학교\programming\gamemaker\my_games\rpg\fairune\icon3.ico" />
     <Image Include="PlatformerRoguelike.ico" />
     <Image Include="Resources\blockpurple.png" />
     <Image Include="small.ico" />

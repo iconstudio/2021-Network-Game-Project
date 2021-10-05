@@ -3,9 +3,9 @@
 
 
 GameInstance::GameInstance(double x, double y, GameWorldMesh* newmesh)
-	: x(x), y(y), image_index(0), image_speed(0), box {0, 0, 1, 1}
-	, image_xscale(1), image_yscale(1), image_angle(0), image_alpha(1)
-	, hspeed(0.0), vspeed(0.0), gravity(0.0)
+	: x(x), y(y), image_index(0.0), image_speed(0.0), box {0, 0, 1, 1}
+	, image_xscale(1.0), image_yscale(1.0), image_angle(0.0), image_alpha(1.0)
+	, hspeed(0.0), vspeed(0.0), gravity(0.0), in_air(false)
 	, room(nullptr), worldmesh(newmesh) {}
 
 GameInstance::~GameInstance() {
@@ -36,31 +36,34 @@ void GameInstance::on_update(double frame_advance) {
 			}
 
 			if (0 < cast_x) {
-				if (0 < hspeed) { // right
-
-				} else { // left
-
-				}
-
-				hspeed = 0.0;
+				side();
 			}
 		}
 
-		double cast_y;
-		double distance_y = abs(vspeed) * frame_advance;
+		vspeed += gravity * frame_advance;
+
+		double cast_y, distance_y = abs(vspeed) * frame_advance;
 		if (vspeed < 0) { // upward
 			cast_y = raycast_up(distance_y);
 		} else {
 			cast_y = raycast_dw(distance_y);
 		}
 
-		if (worldmesh->place_collider(x, bbox_bottom() + 1)) {
-			vspeed += gravity * frame_advance;
+		if (0 < cast_y) {
+			if (0 < vspeed) { // ceil
+				ceil();
+			} else { // land
+				in_air = false;
+				thud();
+			}
 		} else {
-			vspeed = 0.0;
+			in_air = true;
 		}
-		if (0 < cast_y)
-			vspeed = 0.0;
+
+		double by = bbox_bottom() + 1;
+		if (worldmesh->place_collider(bbox_left(), by)
+			|| worldmesh->place_collider(bbox_right(), by))
+			in_air = false;
 	}
 
 	if (sprite_index) {
@@ -122,8 +125,8 @@ bool GameInstance::collide_with(GameInstance*& other) {
 double GameInstance::raycast_lt(double distance) {
 	double move_distance = floor(distance * 400) / 400;
 	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_left() - 1, bbox_top())
-			|| !worldmesh->place_free(bbox_left() - 1, bbox_bottom())) {
+		if (worldmesh->place_solid(bbox_left() - 1, bbox_top())
+			|| worldmesh->place_solid(bbox_left() - 1, bbox_bottom())) {
 			break;
 		}
 		x--;
@@ -136,8 +139,8 @@ double GameInstance::raycast_lt(double distance) {
 double GameInstance::raycast_rt(double distance) {
 	double move_distance = floor(distance * 400) / 400;
 	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_right() + 1, bbox_top())
-			|| !worldmesh->place_free(bbox_right() + 1, bbox_bottom())) {
+		if (worldmesh->place_solid(bbox_right() + 1, bbox_top())
+			|| worldmesh->place_solid(bbox_right() + 1, bbox_bottom())) {
 			break;
 		}
 		x++;
@@ -150,8 +153,8 @@ double GameInstance::raycast_rt(double distance) {
 double GameInstance::raycast_up(double distance) {
 	double move_distance = floor(distance * 400) / 400;
 	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_left(), bbox_top() - 1)
-			|| !worldmesh->place_free(bbox_right(), bbox_top() - 1)) {
+		if (worldmesh->place_solid(bbox_left(), bbox_top() - 1)
+			|| worldmesh->place_solid(bbox_right(), bbox_top() - 1)) {
 			break;
 		}
 		y--;
@@ -168,24 +171,33 @@ double GameInstance::raycast_dw(double distance) {
 
 	while (0 < move_distance) {
 		double by = bbox_bottom() + 1;
-		if (!worldmesh->place_free(lx, by)
-			|| !worldmesh->place_free(rx, by)) {
+		if (worldmesh->place_solid(lx, by)
+			|| worldmesh->place_solid(rx, by)) {
 			break;
 		}
 
-		bool self_pt = worldmesh->place_throughable(x, y);
-		auto bot_check = worldmesh->place_terrain(x, by);
-		auto bot_pt = worldmesh->place_throughable(lx, by) || worldmesh->place_throughable(rx, by);
-		auto next_check = worldmesh->place_terrain(x, y + 16);
-		auto next_pt = worldmesh->place_throughable(lx, y + 16) || worldmesh->place_throughable(rx, y + 16);
+		auto self_what = worldmesh->place_terrain(x, y);
+		bool self_pt = worldmesh->place_plate(lx, y) || worldmesh->place_plate(rx, y);
 
-		if (!self_pt && bot_pt) {
-			if (bot_check == next_check) {
+		auto bot_what_l = worldmesh->place_terrain(lx, by);
+		auto bot_what_r = worldmesh->place_terrain(rx, by);
+		auto bot_pt = worldmesh->place_plate(lx, by) || worldmesh->place_plate(rx, by);
+
+		auto next_what_l = worldmesh->place_terrain(lx, y + 16);
+		auto next_what_r = worldmesh->place_terrain(rx, y + 16);
+		auto next_pt = worldmesh->place_plate(lx, y + 16)
+			|| worldmesh->place_plate(rx, y + 16);
+
+		if (!self_pt) {
+			if (bot_pt) {
 				break;
 			}
-		} else if (self_pt && bot_pt) {
-			if (bot_check == next_check) {
+		} else if (bot_pt && next_pt) {
+			if (bot_what_l && bot_what_r && next_what_l && next_what_r
+				&& (bot_what_l == next_what_l || bot_what_r == next_what_r)) {
 				break;
+			} else {
+				y--;
 			}
 		}
 		y++;
@@ -195,7 +207,26 @@ double GameInstance::raycast_dw(double distance) {
 	return move_distance;
 }
 
-GameScene::GameScene() : done(false), instances{} { instances.clear(); }
+void GameInstance::thud() {
+	y = ::floor(y);
+	vspeed = 0.0;
+}
+
+void GameInstance::ceil() {
+	vspeed = 0.0;
+}
+
+void GameInstance::side() {
+	x = ::floor(x);
+
+	hspeed = 0.0;
+}
+
+GameScene::GameScene()
+	: done(false), instances(), worldmesh(this) {
+	instances.clear();
+	instances.reserve(100);
+}
 
 GameScene::~GameScene() {
 	instances.clear();
@@ -210,17 +241,17 @@ void GameScene::on_create() {
 
 void GameScene::on_destroy() {
 	if (!instances.empty()) {
-		for (auto& instance : instances) {
-			delete instance;
-		}
+		instances.erase(instances.begin(), instances.end());
 	}
+
 	instances.clear();
 }
 
 void GameScene::on_update(double frame_advance) {
 	if (!instances.empty()) {
-		for (auto& instance : instances)
+		for (auto& instance : instances) {
 			instance->on_update(frame_advance);
+		}
 	}
 }
 
@@ -234,4 +265,5 @@ void GameScene::on_render(HDC canvas) {
 void GameScene::reset() {
 	done = false;
 	on_destroy();
+	on_create();
 }
