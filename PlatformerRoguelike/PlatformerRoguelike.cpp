@@ -31,7 +31,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	framework.make_scene<sceneGame>();
+	framework.make_scene<roomStart>();
 	framework.input_register(VK_LEFT);
 	framework.input_register(VK_RIGHT);
 	framework.input_register(VK_UP);
@@ -64,128 +64,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 oGraviton::oGraviton(double x, double y, GameWorldMesh* newmesh)
-	: GameInstance(x, y), worldmesh(newmesh)
-	, gravity(GRAVITY) {}
-
-void oGraviton::on_create() {
-}
-
-void oGraviton::on_update(double frame_advance) {
-	if (0 != hspeed) {
-		double cast_x, distance_x = abs(hspeed) * frame_advance;
-
-		if (0 < hspeed) {
-			cast_x = raycast_rt(distance_x);
-		} else {
-			cast_x = raycast_lt(distance_x);
-		}
-
-		if (0 < cast_x) {
-			if (0 < hspeed) { // right
-
-			} else { // left
-
-			}
-
-			hspeed = 0.0;
-		}
-	}
-
-	double cast_y;
-	double distance_y = abs(vspeed) * frame_advance;
-	if (vspeed < 0) { // upward
-		cast_y = raycast_up(distance_y);
-	} else {
-		cast_y = raycast_dw(distance_y);
-	}
-
-	if (worldmesh->place_collider(x, bbox_bottom() + 1)) {
-		vspeed += gravity * frame_advance;
-	} else {
-		vspeed = 0.0;
-	}
-	if (0 < cast_y)
-		vspeed = 0.0;
-}
-
-void oGraviton::set_worldmesh(GameWorldMesh* newworld) {
-	worldmesh = newworld;
-}
-
-double oGraviton::raycast_lt(double distance) {
-	double move_distance = floor(distance * 400) / 400;
-	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_left() - 1, bbox_top())
-			|| !worldmesh->place_free(bbox_left() - 1, bbox_bottom())) {
-			break;
-		}
-		x--;
-		move_distance--;
-	}
-
-	return move_distance;
-}
-
-double oGraviton::raycast_rt(double distance) {
-	double move_distance = floor(distance * 400) / 400;
-	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_right() + 1, bbox_top())
-			|| !worldmesh->place_free(bbox_right() + 1, bbox_bottom())) {
-			break;
-		}
-		x++;
-		move_distance--;
-	}
-
-	return move_distance;
-}
-
-double oGraviton::raycast_up(double distance) {
-	double move_distance = floor(distance * 400) / 400;
-	while (0 < move_distance) {
-		if (!worldmesh->place_free(bbox_left(), bbox_top() - 1)
-			|| !worldmesh->place_free(bbox_right(), bbox_top() - 1)) {
-			break;
-		}
-		y--;
-		move_distance--;
-	}
-
-	return move_distance;
-}
-
-double oGraviton::raycast_dw(double distance) {
-	double move_distance = floor(distance * 400) / 400;
-	double lx = bbox_left();
-	double rx = bbox_right();
-
-	while (0 < move_distance) {
-		double by = bbox_bottom() + 1;
-		if (!worldmesh->place_free(lx, by)
-			|| !worldmesh->place_free(rx, by)) {
-			break;
-		}
-
-		bool self_pt = worldmesh->place_throughable(x, y);
-		auto bot_check = worldmesh->place_terrain(x, by);
-		auto bot_pt = worldmesh->place_throughable(lx, by) || worldmesh->place_throughable(rx, by);
-		auto next_check = worldmesh->place_terrain(x, y + 16);
-		auto next_pt = worldmesh->place_throughable(lx, y + 16) || worldmesh->place_throughable(rx, y + 16);
-
-		if (!self_pt && bot_pt) {
-			if (bot_check == next_check) {
-				break;
-			}
-		} else if (self_pt && bot_pt) {
-			if (bot_check == next_check) {
-				break;
-			}
-		}
-		y++;
-		move_distance--;
-	}
-
-	return move_distance;
+	: GameInstance(x, y, newmesh), system(nullptr) {
+	gravity = GRAVITY;
 }
 
 void oGraviton::jump(double power) {
@@ -258,7 +138,8 @@ oPlayerBullet::oPlayerBullet(double x, double y, GameWorldMesh* newmesh)
 	gravity = 0.0;
 }
 
-GameWorldMesh::GameWorldMesh(sceneGame* room) : my_room(room) {
+GameWorldMesh::GameWorldMesh(roomStart* room)
+	: my_room(room), map_bitmap(NULL), map_surface(NULL) {
 	map_blend.SourceConstantAlpha = 255;
 	map_blend.BlendOp = AC_SRC_OVER;
 	map_blend.BlendFlags = 0;
@@ -421,10 +302,10 @@ void GameWorldMesh::on_render(HDC canvas) {
 	AlphaBlend(canvas, 0, 0, VIEW_W, VIEW_H, map_surface, 0, 0, VIEW_W, VIEW_H, map_blend);
 }
 
-sceneGame::sceneGame()
+roomStart::roomStart()
 	: worldmesh(this) {}
 
-void sceneGame::on_create() {
+void roomStart::on_create() {
 	framework.background_color = COLOR_GREY;
 
 	worldmesh.load("map.txt");
@@ -432,15 +313,15 @@ void sceneGame::on_create() {
 	GameScene::on_create();
 }
 
-void sceneGame::on_destroy() {
+void roomStart::on_destroy() {
 	GameScene::on_destroy();
 }
 
-void sceneGame::on_update(double frame_advance) {
+void roomStart::on_update(double frame_advance) {
 	GameScene::on_update(frame_advance);
 }
 
-void sceneGame::on_render(HDC canvas) {
+void roomStart::on_render(HDC canvas) {
 	worldmesh.on_render(canvas);
 	GameScene::on_render(canvas);
 }

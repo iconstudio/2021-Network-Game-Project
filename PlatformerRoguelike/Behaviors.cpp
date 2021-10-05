@@ -2,11 +2,11 @@
 #include "Behavior.h"
 
 
-GameInstance::GameInstance(double x, double y)
+GameInstance::GameInstance(double x, double y, GameWorldMesh* newmesh)
 	: x(x), y(y), image_index(0), image_speed(0), box {0, 0, 1, 1}
 	, image_xscale(1), image_yscale(1), image_angle(0), image_alpha(1)
-	, hspeed(0.0), vspeed(0.0)
-	, room(nullptr) {}
+	, hspeed(0.0), vspeed(0.0), gravity(0.0)
+	, room(nullptr), worldmesh(newmesh) {}
 
 GameInstance::~GameInstance() {
 	if (sprite_index)
@@ -20,8 +20,48 @@ void GameInstance::on_create() {}
 void GameInstance::on_destroy() {}
 
 void GameInstance::on_update(double frame_advance) {
-	x += hspeed;
-	y += vspeed;
+	if (!worldmesh) {
+		x += hspeed * frame_advance;
+		y += vspeed * frame_advance;
+		if (gravity != 0.0)
+			vspeed += gravity * frame_advance;
+	} else {
+		if (0 != hspeed) {
+			double cast_x, distance_x = abs(hspeed) * frame_advance;
+
+			if (0 < hspeed) {
+				cast_x = raycast_rt(distance_x);
+			} else {
+				cast_x = raycast_lt(distance_x);
+			}
+
+			if (0 < cast_x) {
+				if (0 < hspeed) { // right
+
+				} else { // left
+
+				}
+
+				hspeed = 0.0;
+			}
+		}
+
+		double cast_y;
+		double distance_y = abs(vspeed) * frame_advance;
+		if (vspeed < 0) { // upward
+			cast_y = raycast_up(distance_y);
+		} else {
+			cast_y = raycast_dw(distance_y);
+		}
+
+		if (worldmesh->place_collider(x, bbox_bottom() + 1)) {
+			vspeed += gravity * frame_advance;
+		} else {
+			vspeed = 0.0;
+		}
+		if (0 < cast_y)
+			vspeed = 0.0;
+	}
 
 	if (sprite_index) {
 		double animation_speed;
@@ -54,6 +94,10 @@ void GameInstance::set_mask(shared_ptr<GameSprite>& sprite) {
 	CopyRect(&box, &(sprite->bbox));
 }
 
+void GameInstance::set_worldmesh(GameWorldMesh* newworld) {
+	worldmesh = newworld;
+}
+
 double GameInstance::bbox_left() const {
 	return x + box.left;
 }
@@ -75,7 +119,83 @@ bool GameInstance::collide_with(GameInstance*& other) {
 			|| bbox_right() < other->bbox_left() || bbox_bottom() < other->bbox_top());
 }
 
-GameScene::GameScene() : done(false), instances{} {}
+double GameInstance::raycast_lt(double distance) {
+	double move_distance = floor(distance * 400) / 400;
+	while (0 < move_distance) {
+		if (!worldmesh->place_free(bbox_left() - 1, bbox_top())
+			|| !worldmesh->place_free(bbox_left() - 1, bbox_bottom())) {
+			break;
+		}
+		x--;
+		move_distance--;
+	}
+
+	return move_distance;
+}
+
+double GameInstance::raycast_rt(double distance) {
+	double move_distance = floor(distance * 400) / 400;
+	while (0 < move_distance) {
+		if (!worldmesh->place_free(bbox_right() + 1, bbox_top())
+			|| !worldmesh->place_free(bbox_right() + 1, bbox_bottom())) {
+			break;
+		}
+		x++;
+		move_distance--;
+	}
+
+	return move_distance;
+}
+
+double GameInstance::raycast_up(double distance) {
+	double move_distance = floor(distance * 400) / 400;
+	while (0 < move_distance) {
+		if (!worldmesh->place_free(bbox_left(), bbox_top() - 1)
+			|| !worldmesh->place_free(bbox_right(), bbox_top() - 1)) {
+			break;
+		}
+		y--;
+		move_distance--;
+	}
+
+	return move_distance;
+}
+
+double GameInstance::raycast_dw(double distance) {
+	double move_distance = floor(distance * 400) / 400;
+	double lx = bbox_left();
+	double rx = bbox_right();
+
+	while (0 < move_distance) {
+		double by = bbox_bottom() + 1;
+		if (!worldmesh->place_free(lx, by)
+			|| !worldmesh->place_free(rx, by)) {
+			break;
+		}
+
+		bool self_pt = worldmesh->place_throughable(x, y);
+		auto bot_check = worldmesh->place_terrain(x, by);
+		auto bot_pt = worldmesh->place_throughable(lx, by) || worldmesh->place_throughable(rx, by);
+		auto next_check = worldmesh->place_terrain(x, y + 16);
+		auto next_pt = worldmesh->place_throughable(lx, y + 16) || worldmesh->place_throughable(rx, y + 16);
+
+		if (!self_pt && bot_pt) {
+			if (bot_check == next_check) {
+				break;
+			}
+		} else if (self_pt && bot_pt) {
+			if (bot_check == next_check) {
+				break;
+			}
+		}
+		y++;
+		move_distance--;
+	}
+
+	return move_distance;
+}
+
+GameScene::GameScene() : done(false), instances{} { instances.clear(); }
 
 GameScene::~GameScene() {
 	instances.clear();
@@ -101,7 +221,6 @@ void GameScene::on_update(double frame_advance) {
 	if (!instances.empty()) {
 		for (auto& instance : instances)
 			instance->on_update(frame_advance);
-		//for (auto it = instances.begin(); it != instances.end(); ++it) (*it)->on_update(frame_advance);
 	}
 }
 

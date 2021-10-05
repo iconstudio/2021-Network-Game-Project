@@ -9,7 +9,7 @@ class GameWorldMesh;
 class GameScene;
 class sceneTitle;
 class sceneMainMenu;
-class sceneGame;
+class roomStart;
 class sceneScoring;
 class sceneSetting;
 
