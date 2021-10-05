@@ -47,33 +47,6 @@ int recvn(SOCKET sock, char* buffer, int length, int flags) {
 	return (length - left);
 }
 
-int receive_packet(SOCKET sock, char*& buffer, int flags) {
-	int buffer_length = 0;
-	int result = recvn(sock, (char*)(&buffer_length), sizeof(int), flags);
-	if (SOCKET_ERROR == result) {
-		err_display("recvn 1");
-		return 0;
-	} else if (0 == result) {
-		return 0;
-	}
-
-	print_receive(0, buffer_length);
-
-	buffer = new char[buffer_length + 1];
-	result = recvn(sock, buffer, buffer_length, flags);
-	if (SOCKET_ERROR == result) {
-		err_display("recvn 2");
-		return 0;
-	} else if (0 == result) {
-		return 0;
-	}
-
-	buffer[buffer_length] = '\0';
-	printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", buffer_length);
-
-	return buffer_length;
-}
-
 int main(void) {
 	WSADATA wsa;
 
@@ -139,7 +112,6 @@ int main(void) {
 			}
 
 			file_path[file_path_length] = '\0';
-			printf("\n[TCP 서버] 수신 완료 (크기: %d)\n", file_path_length);
 
 			// 파일 내용
 			result = recvn(client_socket, (char*)(&file_buffer_length), sizeof(int), 0);

@@ -5,8 +5,7 @@
 #include <WinSock2.h>
 #include <stdio.h>
 
-//#define SERVER_IP "127.0.0.1"
-#define SERVER_IP "172.30.1.11"
+#define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 9000
 #define PATH_SIZE 512
 
@@ -62,6 +61,7 @@ int main(void) {
 		file_size = ftell(myfile);
 		fseek(myfile, 0, SEEK_SET);
 		file_buffer = new char[file_size];
+		ZeroMemory(file_buffer, file_size);
 
 		fread(file_buffer, file_size, 1, myfile);
 

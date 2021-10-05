@@ -14,7 +14,7 @@ void err_quit(const char* msg);
 void err_display(const char* msg);
 
 /*
-	사용자로부터 주소 정보를 받아 아이피 주소에서 어플리케이션으로 접속할 수 있는 포트 번호를 확인하는 프로그램입니다.
+	사용자로부터 주소 정보를 받아 아이피 주소에서 열려 있는 포트 번호를 확인하는 프로그램입니다.
 */
 int main(void) {
 	WSADATA wsa;
