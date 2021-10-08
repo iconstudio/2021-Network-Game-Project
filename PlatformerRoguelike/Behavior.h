@@ -3,6 +3,24 @@
 #include "Sprite.h"
 
 
+enum TILES : char {
+	NONE = '0'
+	, PLAYER = '@'
+	, BLOCK = '#'
+	, BROKEN_BLOCK = '3'
+	, BLOCK_END = '0'
+	, PLATE = '-'
+	, WOODBOX = 'b'
+	, WOODROOTBOX = 'B'
+	, GATE = 'X'
+	, SPAWN = '&'
+	, SPIKE_LT = '<'
+	, SPIKE_RT = '>'
+	, SPIKE_UP = '^'
+	, SPIKE = '*'
+	, AIRSPAWN = '^'
+};
+
 enum class SPAWN_DIFFICULTY { NO, VERYEASY, EASY, NORMAL, HARD };
 
 enum class SPAWN_TYPES { NORMAL, AIR };
@@ -10,7 +28,6 @@ enum class SPAWN_TYPES { NORMAL, AIR };
 class GameMeshPiece {
 public:
 	GameMeshPiece(const char ch = '0');
-	bool operator==(const char ch) const;
 
 	char data;
 };
@@ -18,7 +35,9 @@ public:
 class GameSpawnPoint {
 public:
 	GameSpawnPoint(SPAWN_TYPES ctype, int cx, int cy);
+
 	int x, y;
+	double time_activate = 0.0;
 
 	SPAWN_DIFFICULTY difficulty;
 	SPAWN_TYPES type;
@@ -26,10 +45,12 @@ public:
 
 class GameWorldMesh {
 public:
-	GameWorldMesh(GameScene* room);
+	GameWorldMesh(GameScene* room, int new_width, int new_height);
 	~GameWorldMesh();
 
 	void load(const char* mapfile);
+	void set_tile(int ix, int iy, TILES tile);
+	void make_tile(int ix, int iy);
 	void build();
 	void clear();
 	void reset();
@@ -42,6 +63,8 @@ public:
 
 	void on_render(HDC canvas);
 	double playerx, playery;
+
+	const int width, height, iwidth, iheight;
 
 private:
 	GameScene* my_room;
@@ -84,6 +107,8 @@ public:
 	double raycast_up(double distance);
 	double raycast_dw(double distance);
 
+	virtual void jump(double power);
+
 	virtual void thud();
 	virtual void ceil();
 	virtual void side();
@@ -99,14 +124,14 @@ public:
 	double gravity;
 	bool in_air;
 
-	GameScene* room; // 소속 장면
+	GameScene* my_room; // 소속 장면
 	GameWorldMesh* worldmesh;
 };
 
 // 장면 컴포넌트
 class GameScene {
 public:
-	GameScene();
+	GameScene(int new_width, int new_height);
 	virtual ~GameScene();
 
 	virtual void on_create();
@@ -119,7 +144,7 @@ public:
 	template<class _GObj, typename ...Ty>
 	auto instance_create(Ty... args) {
 		_GObj* lptr = new _GObj(args...);
-		lptr->room = this;
+		lptr->my_room = this;
 
 		instances.push_back(lptr);
 
@@ -140,6 +165,7 @@ public:
 	
 	bool done;
 
+	const int width, height;
 	GameWorldMesh worldmesh;
 
 	vector<GameInstance*> instances;

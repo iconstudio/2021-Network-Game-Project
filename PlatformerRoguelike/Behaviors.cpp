@@ -1,3 +1,4 @@
+#include "..\Findme\Findme.h"
 #include "pch.h"
 #include "Behavior.h"
 
@@ -6,13 +7,13 @@ GameInstance::GameInstance(double x, double y, GameWorldMesh* newmesh)
 	: x(x), y(y), image_index(0.0), image_speed(0.0), box {0, 0, 1, 1}
 	, image_xscale(1.0), image_yscale(1.0), image_angle(0.0), image_alpha(1.0)
 	, hspeed(0.0), vspeed(0.0), gravity(0.0), in_air(false)
-	, room(nullptr), worldmesh(newmesh) {}
+	, my_room(nullptr), worldmesh(newmesh) {}
 
 GameInstance::~GameInstance() {
 	if (sprite_index)
 		sprite_index.reset();
-	if (room)
-		room->instance_kill(this);
+	if (my_room)
+		my_room->instance_kill(this);
 }
 
 void GameInstance::on_create() {}
@@ -207,6 +208,10 @@ double GameInstance::raycast_dw(double distance) {
 	return move_distance;
 }
 
+void GameInstance::jump(double power) {
+	vspeed = -power;
+}
+
 void GameInstance::thud() {
 	y = ::floor(y);
 	vspeed = 0.0;
@@ -222,8 +227,9 @@ void GameInstance::side() {
 	hspeed = 0.0;
 }
 
-GameScene::GameScene()
-	: done(false), instances(), worldmesh(this) {
+GameScene::GameScene(int new_width, int new_height)
+	: width(new_width), height(new_height), worldmesh(this, new_width, new_height)
+	, done(false), instances() {
 	instances.clear();
 	instances.reserve(100);
 }
@@ -234,13 +240,17 @@ GameScene::~GameScene() {
 
 void GameScene::on_create() {
 	if (!instances.empty()) {
-		for (auto& instance : instances)
+		std::for_each(instances.begin(), instances.end(), [](auto& instance) {
 			instance->on_create();
+		});
 	}
 }
 
 void GameScene::on_destroy() {
 	if (!instances.empty()) {
+		std::for_each(instances.begin(), instances.end(), [](auto& instance) {
+			instance->on_destroy();
+		});
 		instances.erase(instances.begin(), instances.end());
 	}
 
@@ -249,16 +259,17 @@ void GameScene::on_destroy() {
 
 void GameScene::on_update(double frame_advance) {
 	if (!instances.empty()) {
-		for (auto& instance : instances) {
+		std::for_each(instances.begin(), instances.end(), [&](auto& instance) {
 			instance->on_update(frame_advance);
-		}
+		});
 	}
 }
 
 void GameScene::on_render(HDC canvas) {
 	if (!instances.empty()) {
-		for (auto& instance : instances)
+		std::for_each(instances.begin(), instances.end(), [&](auto& instance) {
 			instance->on_render(canvas);
+		});
 	}
 }
 

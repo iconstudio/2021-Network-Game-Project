@@ -5,12 +5,10 @@
 class GameSprite;
 class GameFramework;
 class GameWorldMesh;
-
 class GameScene;
-class roomGameTemplate;
-
+class roomStart;
+class roomGame;
 class GameInstance;
-class oSolid;
 
 #define CLIENT_W 960
 #define CLIENT_H 540
