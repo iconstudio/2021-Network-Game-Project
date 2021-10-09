@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mt_Server.cpp">
+    <ClCompile Include="mt_Client.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

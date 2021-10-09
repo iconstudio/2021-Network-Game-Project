@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{db25b742-b31d-4276-b279-39256bc58165}</ProjectGuid>
-    <RootNamespace>wsmultithreadserver</RootNamespace>
+    <ProjectGuid>{ad9197d6-bbac-4da0-9962-02a3e593c5f9}</ProjectGuid>
+    <RootNamespace>wsmultithreadclient</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -139,7 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="mt_Server.cpp" />
+    <ClCompile Include="mt_Client.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
