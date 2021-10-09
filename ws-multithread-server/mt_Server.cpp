@@ -12,7 +12,7 @@ using namespace std;
 
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
-#define THREADS_MAX 2
+#define THREADS_MAX 64
 
 struct MyThread {
 	SOCKET client_socket;
@@ -170,12 +170,14 @@ int main(void) {
 	if (SOCKET_ERROR == result) err_quit("listen");
 
 	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (!my_print_event) return 1;
 	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
+	if (!my_recv_event) return 1;
 
-	HANDLE show_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
-	if (!show_thread) return 1;
+	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
+	if (!print_thread) return 1;
 
-	my_threads.reserve(64);
+	my_threads.reserve(THREADS_MAX);
 	InitializeCriticalSection(&my_cs);
 
 	cout << "서버 실행 중" << '\n';
@@ -200,6 +202,7 @@ int main(void) {
 		if (my_thread) {
 			CloseHandle(my_thread);
 		} else {
+			delete threadbox;
 			closesocket(client_socket);
 		}
 	}
@@ -208,6 +211,8 @@ int main(void) {
 
 	closesocket(listener);
 	DeleteCriticalSection(&my_cs);
+	CloseHandle(my_print_event);
+	CloseHandle(my_recv_event);
 	WSACleanup();
 
 	return 0;

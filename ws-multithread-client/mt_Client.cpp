@@ -11,8 +11,8 @@
 
 void err_quit(const char* msg);
 
-void send_packet(SOCKET socket, char* buffer, int length, int flags) {
-	int result = send(socket, (char*)(&length), sizeof(int), flags);
+void send_packet(SOCKET socket, char* buffer, int length) {
+	int result = send(socket, (char*)(&length), sizeof(int), 0);
 	if (SOCKET_ERROR == result) {
 		err_quit("send 1");
 	}
@@ -63,8 +63,8 @@ int main(void) {
 		err_quit("fopen");
 	}
 
-	send_packet(mysocket, file_path, strlen(file_path), 0);
-	send_packet(mysocket, (char*)(file_buffer), file_size, 0);
+	send_packet(mysocket, file_path, strlen(file_path));
+	send_packet(mysocket, (char*)(file_buffer), file_size);
 
 	closesocket(mysocket);
 	WSACleanup();
