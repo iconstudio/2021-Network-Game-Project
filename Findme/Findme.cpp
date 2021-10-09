@@ -21,6 +21,8 @@ const int game_map_iwidth = GAME_SCENE_W / 16;
 const int game_map_iheight = GAME_SCENE_H / 16;
 char** game_map;
 
+const int enemy_number = 2000;
+
 oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
 
 void oPlayer::on_create() {
@@ -155,3 +157,5 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	return 0;
 }
+
+oFakePerson::oFakePerson(char** mesh) {}
