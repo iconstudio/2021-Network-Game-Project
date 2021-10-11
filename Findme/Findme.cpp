@@ -22,7 +22,7 @@ char** game_map;
 const int enemy_number = 2000;
 
 const uniform_int_distribution<int> game_distribution;
-const default_random_engine game_random_engine{};
+const default_random_engine game_random_engine;
 const random_device game_random_device;
 
 oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
