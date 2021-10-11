@@ -48,6 +48,8 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
+		ResetEvent(my_recv_event);
+
 		system("cls");
 		//EnterCriticalSection(&my_cs);
 		for (auto it = my_threads.begin(); it != my_threads.end(); ++it) {
@@ -102,8 +104,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
-		cout << "¼ö½Å Áß" << endl;
-		//
 		EnterCriticalSection(&my_cs);
 		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
@@ -124,10 +124,10 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 				break;
 			}
 
-			ResetEvent(my_recv_event);
-
+			EnterCriticalSection(&my_cs);
 			progress += result;
 			my_thread->progress = progress;
+			LeaveCriticalSection(&my_cs);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
