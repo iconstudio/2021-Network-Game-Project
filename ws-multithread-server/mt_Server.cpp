@@ -58,7 +58,7 @@ void print_progress() {
 }
 
 DWORD WINAPI print_thread(LPVOID lpparameter) {
-
+	return 0;
 }
 
 DWORD WINAPI server_thread(LPVOID lpparameter) {
