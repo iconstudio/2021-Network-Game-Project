@@ -108,8 +108,8 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		my_thread->size = buffer_length;
 		int progress = 0;
 		while (progress < buffer_length) {
-			int result = WaitForSingleObject(my_recv_event, INFINITE);
-			if (result != WAIT_OBJECT_0) return 1;
+			//int result = WaitForSingleObject(my_recv_event, INFINITE);
+			//if (result != WAIT_OBJECT_0) return 1;
 
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
@@ -120,7 +120,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
+			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
+			LeaveCriticalSection(&my_cs);
 			ResetEvent(my_recv_event);
 			SetEvent(my_print_event);
 		}
