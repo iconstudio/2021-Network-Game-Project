@@ -14,17 +14,15 @@ using namespace std;
 
 struct MyThread {
 	SOCKET client_socket;
-	u_int index = 0;
+	u_int index;
 	int progress = 0;
 	int size = 1;
 };
 
-vector<MyThread*> my_threads;
-int my_recv_count = 0;
-
-HANDLE my_recv_event;
-
 CRITICAL_SECTION my_cs;
+HANDLE my_print_event;
+HANDLE my_recv_event;
+vector<MyThread*> my_threads;
 
 void err_quit(const char* msg);
 void err_display(const char* msg);
@@ -45,28 +43,30 @@ int receive_packet(SOCKET sock, char* buffer, int length) {
 	return progress;
 }
 
-void print_progress() {
-	//EnterCriticalSection(&my_cs);
-	auto it = my_threads.cbegin();
-	auto itend = my_threads.cend();
-	//LeaveCriticalSection(&my_cs);
+DWORD WINAPI print_processor(LPVOID lpparameter) {
+	while (true) {
+		int result = WaitForSingleObject(my_print_event, INFINITE);
+		if (result != WAIT_OBJECT_0) return 1;
 
-	system("cls");
-	for (; it != itend; ++it) {
-		auto my_thread = *(it);
-		int progress = my_thread->progress;
-		int limit = my_thread->size;
-		int percent = ((double)(progress) / (double)(limit)) * 100;
+		system("cls");
+		//EnterCriticalSection(&my_cs);
+		for (auto it = my_threads.begin(); it != my_threads.end(); ++it) {
+			auto my_thread = *(it);
+			int progress = my_thread->progress;
+			int limit = my_thread->size;
+			int percent = ((double)(progress) / (double)(limit)) * 100;
 
-		cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+		}
+		//LeaveCriticalSection(&my_cs);
+
+		SetEvent(my_recv_event);
+		SetEvent(my_recv_event);
 	}
-}
-
-DWORD WINAPI print_thread(LPVOID lpparameter) {
 	return 0;
 }
 
-DWORD WINAPI server_thread(LPVOID lpparameter) {
+DWORD WINAPI server_processor(LPVOID lpparameter) {
 	MyThread* my_thread = (MyThread*)(lpparameter);
 	SOCKET client_socket = my_thread->client_socket;
 
@@ -101,12 +101,16 @@ DWORD WINAPI server_thread(LPVOID lpparameter) {
 		}
 
 		//
+		EnterCriticalSection(&my_cs);
+		my_thread->size = buffer_length;
+		LeaveCriticalSection(&my_cs);
+
 		char* file_buffer = new char[buffer_length + 1];
 		ZeroMemory(file_buffer, buffer_length + 1);
 
 		int progress = 0;
 		while (progress < buffer_length) {
-			result = WaitForSingleObject(my_recv_event, INFINITE);
+			int result = WaitForSingleObject(my_recv_event, INFINITE);
 			if (result != WAIT_OBJECT_0) return 1;
 
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
@@ -117,10 +121,11 @@ DWORD WINAPI server_thread(LPVOID lpparameter) {
 				break;
 			}
 
+			ResetEvent(my_recv_event);
+
 			progress += result;
 			my_thread->progress = progress;
-			my_thread->size = buffer_length;
-			print_progress();
+			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
 
@@ -138,11 +143,13 @@ DWORD WINAPI server_thread(LPVOID lpparameter) {
 	}
 
 	closesocket(client_socket);
+
 	return 0;
 }
 
 int main(void) {
 	WSADATA wsa;
+
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
 
 	SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
@@ -160,8 +167,14 @@ int main(void) {
 	result = listen(listener, SOMAXCONN);
 	if (SOCKET_ERROR == result) err_quit("listen");
 
+	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (!my_print_event) return 1;
+
 	my_recv_event = CreateEvent(NULL, TRUE, TRUE, NULL);
 	if (!my_recv_event) return 1;
+
+	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
+	if (!print_thread) return 1;
 
 	my_threads.reserve(THREADS_MAX);
 	InitializeCriticalSection(&my_cs);
@@ -176,30 +189,32 @@ int main(void) {
 			break;
 		}
 
-		cout << "클라이언트 접속 - IP 주소: "  << inet_ntoa(client_address.sin_addr)
+		cout << "클라이언트 접속 - IP 주소: " << inet_ntoa(client_address.sin_addr)
 			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
-		
-		MyThread* my_thread = new MyThread;
-		my_thread->client_socket = client_socket;
 
-		HANDLE hthread = CreateThread(NULL, 0, server_thread, my_thread, 0, NULL);
-		my_thread->index = (u_int)hthread;
+		MyThread* threadbox = new MyThread;
+		threadbox->client_socket = client_socket;
 
-		if (hthread) {
+		HANDLE my_thread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
+		threadbox->index = (u_int)my_thread;
+
+		if (my_thread) {
 			EnterCriticalSection(&my_cs);
-			my_threads.push_back(my_thread);
+			my_threads.push_back(threadbox);
 			LeaveCriticalSection(&my_cs);
-			CloseHandle(hthread);
+			CloseHandle(my_thread);
 		} else {
-			delete my_thread;
+			delete threadbox;
 			closesocket(client_socket);
 		}
 	}
 
 	closesocket(listener);
 	DeleteCriticalSection(&my_cs);
+	CloseHandle(my_print_event);
 	CloseHandle(my_recv_event);
 	WSACleanup();
+
 	return 0;
 }
 
@@ -226,7 +241,6 @@ void err_display(const char* msg) {
 
 	cout << msg << " - " << (char*)(lpMSGBuffer);
 
-	// 버퍼 해제
 	LocalFree(lpMSGBuffer);
 }
 
