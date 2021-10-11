@@ -20,11 +20,10 @@ struct MyThread {
 	int size = 1;
 };
 
-vector<MyThread*> my_threads;
+CRITICAL_SECTION my_cs;
 HANDLE my_print_event;
 HANDLE my_recv_event;
-
-CRITICAL_SECTION my_cs;
+vector<MyThread*> my_threads;
 
 void err_quit(const char* msg);
 void err_display(const char* msg);
@@ -50,18 +49,23 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
-		//EnterCriticalSection(&my_cs);
+		ResetEvent(my_recv_event);
+
 		system("cls");
+		//EnterCriticalSection(&my_cs);
 		for (auto it = my_threads.begin(); it != my_threads.end(); ++it) {
 			auto my_thread = *(it);
+			EnterCriticalSection(&my_cs);
 			int progress = my_thread->progress;
 			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+			LeaveCriticalSection(&my_cs);
 		}
 		//LeaveCriticalSection(&my_cs);
 
+		SetEvent(my_recv_event);
 		SetEvent(my_recv_event);
 	}
 	return 0;
@@ -101,9 +105,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
-		//
 		EnterCriticalSection(&my_cs);
-		my_threads.push_back(my_thread);
 		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
 
@@ -125,8 +127,10 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 				break;
 			}
 
+			EnterCriticalSection(&my_cs);
 			progress += result;
 			my_thread->progress = progress;
+			LeaveCriticalSection(&my_cs);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -191,9 +195,9 @@ int main(void) {
 			break;
 		}
 
-		cout << "클라이언트 접속 - IP 주소: "  << inet_ntoa(client_address.sin_addr)
+		cout << "클라이언트 접속 - IP 주소: " << inet_ntoa(client_address.sin_addr)
 			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
-		
+
 		MyThread* threadbox = new MyThread;
 		threadbox->client_socket = client_socket;
 
@@ -201,7 +205,9 @@ int main(void) {
 		threadbox->index = (u_int)my_thread;
 
 		if (my_thread) {
-			CloseHandle(my_thread);
+			EnterCriticalSection(&my_cs);
+			my_threads.push_back(threadbox);
+			LeaveCriticalSection(&my_cs);
 		} else {
 			delete threadbox;
 			closesocket(client_socket);
@@ -240,7 +246,5 @@ void err_display(const char* msg) {
 
 	cout << msg << " - " << (char*)(lpMSGBuffer);
 
-	// 버퍼 해제
 	LocalFree(lpMSGBuffer);
 }
-
