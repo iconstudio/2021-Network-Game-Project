@@ -15,7 +15,7 @@ using namespace std;
 
 struct MyThread {
 	SOCKET client_socket;
-	u_int index = 0;
+	u_int index;
 	int progress = 0;
 	int size = 1;
 };
@@ -50,25 +50,19 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
-		//ResetEvent(my_recv_event);
-		EnterCriticalSection(&my_cs);
-		auto my_size = my_threads.size();
-		LeaveCriticalSection(&my_cs);
-
+		//EnterCriticalSection(&my_cs);
 		system("cls");
-		for (int i = 0; i < my_size; ++i) {
-			EnterCriticalSection(&my_cs);
-			auto my_thread = my_threads.at(i);
-			LeaveCriticalSection(&my_cs);
-
+		for (auto it = my_threads.begin(); it != my_threads.end(); ++it) {
+			auto my_thread = *(it);
 			int progress = my_thread->progress;
 			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 		}
+		//LeaveCriticalSection(&my_cs);
 
-		//SetEvent(my_recv_event);
+		SetEvent(my_recv_event);
 	}
 	return 0;
 }
@@ -108,14 +102,21 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		}
 
 		//
+		EnterCriticalSection(&my_cs);
+		my_threads.push_back(my_thread);
+		my_thread->size = buffer_length;
+		LeaveCriticalSection(&my_cs);
+
 		char* file_buffer = new char[buffer_length + 1];
 		ZeroMemory(file_buffer, buffer_length + 1);
 
 		int progress = 0;
 		while (progress < buffer_length) {
-			//int result = WaitForSingleObject(my_recv_event, INFINITE);
-			//if (result != WAIT_OBJECT_0) return 1;
+			int result = WaitForSingleObject(my_recv_event, INFINITE);
+			if (result != WAIT_OBJECT_0) return 1;
 
+			ResetEvent(my_recv_event);
+			//cout << my_thread->index << '\n';
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
@@ -126,7 +127,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 			progress += result;
 			my_thread->progress = progress;
-			my_thread->size = buffer_length;
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -201,9 +201,6 @@ int main(void) {
 		threadbox->index = (u_int)my_thread;
 
 		if (my_thread) {
-			EnterCriticalSection(&my_cs);
-			my_threads.push_back(threadbox);
-			LeaveCriticalSection(&my_cs);
 			CloseHandle(my_thread);
 		} else {
 			delete threadbox;
