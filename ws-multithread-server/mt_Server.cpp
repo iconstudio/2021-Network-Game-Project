@@ -49,7 +49,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
-		EnterCriticalSection(&my_cs);
+		//EnterCriticalSection(&my_cs);
 		system("cls");
 		for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
 			auto my_thread = *(it);
@@ -59,7 +59,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 		}
-		LeaveCriticalSection(&my_cs);
+		//LeaveCriticalSection(&my_cs);
 	}
 	return 0;
 }
@@ -104,9 +104,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 		EnterCriticalSection(&my_cs);
 		my_threads.push_back(my_thread);
-		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
 
+		my_thread->size = buffer_length;
 		int progress = 0;
 		while (progress < buffer_length) {
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
@@ -118,14 +118,10 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
-			//EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
-			//LeaveCriticalSection(&my_cs);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
-
-		cout << "수신 완료\n";
 
 		if (file_path && file_buffer) {
 			std::ofstream file_writer(file_path, ios::binary);
@@ -141,7 +137,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 	}
 
 	closesocket(client_socket);
-	cout << "클라이언트 종료" << endl;
 
 	return 0;
 }
