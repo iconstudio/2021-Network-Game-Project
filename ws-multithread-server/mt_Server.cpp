@@ -1,9 +1,6 @@
 #pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define SERVER_PORT 9000
-#define INFO_LENGTH 1024
-#define THREADS_MAX 64
 
 #include <WinSock2.h>
 #include <stdio.h>
@@ -11,6 +8,10 @@
 #include <fstream>
 #include <vector>
 using namespace std;
+
+#define SERVER_PORT 9000
+#define INFO_LENGTH 1024
+#define THREADS_MAX 64
 
 struct MyThread {
 	SOCKET client_socket;
@@ -20,8 +21,6 @@ struct MyThread {
 };
 
 vector<MyThread*> my_threads;
-int my_recv_count = 0;
-
 HANDLE my_print_event;
 HANDLE my_recv_event;
 
@@ -51,6 +50,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
+		//ResetEvent(my_recv_event);
 		EnterCriticalSection(&my_cs);
 		auto my_size = my_threads.size();
 		LeaveCriticalSection(&my_cs);
@@ -68,21 +68,9 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 		}
 
-		SetEvent(my_recv_event);
+		//SetEvent(my_recv_event);
 	}
 	return 0;
-}
-
-void print_progress() {
-	system("cls");
-	for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
-		auto my_thread = *(it);
-		int progress = my_thread->progress;
-		int limit = my_thread->size;
-		int percent = ((double)(progress) / (double)(limit)) * 100;
-
-		cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-	}
 }
 
 DWORD WINAPI server_processor(LPVOID lpparameter) {
@@ -125,8 +113,8 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 		int progress = 0;
 		while (progress < buffer_length) {
-			result = WaitForSingleObject(my_recv_event, INFINITE);
-			if (result != WAIT_OBJECT_0) return 1;
+			//int result = WaitForSingleObject(my_recv_event, INFINITE);
+			//if (result != WAIT_OBJECT_0) return 1;
 
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
@@ -139,17 +127,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			progress += result;
 			my_thread->progress = progress;
 			my_thread->size = buffer_length;
-
-			EnterCriticalSection(&my_cs);
-			if (my_threads.size() <= ++my_recv_count) {
-				ResetEvent(my_recv_event);
-				my_recv_count = 0;
-				print_progress();
-				SetEvent(my_recv_event);
-
-				//SetEvent(my_print_event);
-			}
-			LeaveCriticalSection(&my_cs);
+			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
 
