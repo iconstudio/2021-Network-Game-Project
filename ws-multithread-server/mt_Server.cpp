@@ -57,7 +57,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-			Sleep(10);
+			Sleep(100);
 		}
 		LeaveCriticalSection(&my_cs);
 
@@ -102,9 +102,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 		EnterCriticalSection(&my_cs);
 		my_threads_info.push_back(my_thread);
+		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
 
-		my_thread->size = buffer_length;
 		char* file_buffer = new char[buffer_length + 1];
 		ZeroMemory(file_buffer, buffer_length + 1);
 
@@ -122,7 +122,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
+			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
+			LeaveCriticalSection(&my_cs);
 			//ResetEvent(my_recv_event);
 			SetEvent(my_print_event);
 		}
