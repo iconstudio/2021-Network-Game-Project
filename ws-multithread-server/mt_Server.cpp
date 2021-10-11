@@ -46,10 +46,10 @@ int receive_packet(SOCKET sock, char* buffer, int length) {
 }
 
 void print_progress() {
-	EnterCriticalSection(&my_cs);
+	//EnterCriticalSection(&my_cs);
 	auto it = my_threads.cbegin();
 	auto itend = my_threads.cend();
-	LeaveCriticalSection(&my_cs);
+	//LeaveCriticalSection(&my_cs);
 
 	system("cls");
 	for (; it != itend; ++it) {
