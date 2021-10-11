@@ -194,8 +194,7 @@ int main(void) {
 		HANDLE hthread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
 		threadbox->index = hthread;
 
-		if (hthread) {
-		} else {
+		if (hthread == NULL) {
 			delete threadbox;
 			closesocket(client_socket);
 		}
