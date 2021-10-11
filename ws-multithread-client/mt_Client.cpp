@@ -1,14 +1,12 @@
 #pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define SERVER_IP "127.0.0.1"
+#define SERVER_PORT 9000
+#define PATH_SIZE 512
 
 #include <WinSock2.h>
 #include <stdio.h>
-
-#define SERVER_IP "172.30.1.11"
-//#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 9000
-#define PATH_SIZE 512
 
 void err_quit(const char* msg);
 

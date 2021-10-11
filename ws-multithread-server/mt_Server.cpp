@@ -1,7 +1,6 @@
 #pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
 #define THREADS_MAX 2
@@ -57,7 +56,6 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-			Sleep(100);
 		}
 		LeaveCriticalSection(&my_cs);
 
@@ -125,7 +123,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
 			LeaveCriticalSection(&my_cs);
-			//ResetEvent(my_recv_event);
+
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
