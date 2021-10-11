@@ -46,8 +46,13 @@ int receive_packet(SOCKET sock, char* buffer, int length) {
 }
 
 void print_progress() {
+	EnterCriticalSection(&my_cs);
+	auto it = my_threads.cbegin();
+	auto itend = my_threads.cend();
+	LeaveCriticalSection(&my_cs);
+
 	system("cls");
-	for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
+	for (; it != itend; ++it) {
 		auto my_thread = *(it);
 		int progress = my_thread->progress;
 		int limit = my_thread->size;
@@ -115,9 +120,7 @@ DWORD WINAPI server_thread(LPVOID lpparameter) {
 			progress += result;
 			my_thread->progress = progress;
 			my_thread->size = buffer_length;
-			EnterCriticalSection(&my_cs);
 			print_progress();
-			LeaveCriticalSection(&my_cs);
 		}
 		if (0 == progress) break;
 
