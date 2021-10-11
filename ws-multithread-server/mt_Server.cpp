@@ -61,7 +61,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 			//LeaveCriticalSection(&my_cs);
-			Sleep(800);
+			Sleep(1);
 		}
 
 		SetEvent(my_recv_event);
