@@ -5,8 +5,6 @@
 
 #define MAX_LOADSTRING 100
 #define RENDER_TIMER_ID 1
-#define GAME_SCENE_W 320 * 3
-#define GAME_SCENE_H 240 * 3
 
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
@@ -15,7 +13,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 WindowsClient game_client{ CLIENT_W, CLIENT_H };
 GameFramework framework{ GAME_SCENE_W, GAME_SCENE_H, VIEW_W, VIEW_H, PORT_W, PORT_H };
 
-auto sPlayerStand = make_sprite(TEXT("Resource\\player_stand.png"), 1, 8, 8);
+auto sHumanStand = make_sprite(TEXT("Resource\\player_stand.png"), 1, 8, 8);
 
 const int game_map_iwidth = GAME_SCENE_W / 16;
 const int game_map_iheight = GAME_SCENE_H / 16;
@@ -23,10 +21,14 @@ char** game_map;
 
 const int enemy_number = 2000;
 
+const uniform_int_distribution<int> game_distribution;
+const default_random_engine game_random_engine{};
+const random_device game_random_device;
+
 oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
 
 void oPlayer::on_create() {
-	set_sprite(sPlayerStand);
+	set_sprite(sHumanStand);
 }
 
 void oPlayer::on_update(double frame_advance) {
@@ -34,6 +36,20 @@ void oPlayer::on_update(double frame_advance) {
 }
 
 void oPlayer::on_render(HDC canvas) {
+	GameInstance::on_render(canvas);
+}
+
+oFakePerson::oFakePerson(char** mesh) {}
+
+void oFakePerson::on_create() {
+	set_sprite(sHumanStand);
+}
+
+void oFakePerson::on_update(double frame_advance) {
+	GameInstance::on_update(frame_advance);
+}
+
+void oFakePerson::on_render(HDC canvas) {
 	GameInstance::on_render(canvas);
 }
 
@@ -62,6 +78,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	framework.background_color = COLOR_GOLD;
 
 	auto player = framework.instance_create<oPlayer>(90, 90);
+	for (int i = 0; i < enemy_number; ++i) {
+		int cx = game_distribution(game_random_engine);
+
+	}
 
 	MSG msg;
 	while (true) {
@@ -157,5 +177,3 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	return 0;
 }
-
-oFakePerson::oFakePerson(char** mesh) {}

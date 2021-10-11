@@ -21,6 +21,10 @@ public:
 	int bbox_right() const;
 	int bbox_bottom() const;
 
+	char get_terrain(int ix, int iy) const;
+	char place_terrain(double cx, double cy);
+	bool place_solid(double cx, double cy);
+
 	bool collide_with(GameInstance*& other);
 	int raycast_lt(double distance);
 	int raycast_rt(double distance);
@@ -59,16 +63,18 @@ public:
 	bool input_check_pressed(WPARAM virtual_button);
 
 	void set_mesh(char**& new_mesh);
-
 	template<class _GameClass = GameInstance>
 	_GameClass* instance_create(int x = 0, int y = 0);
 
 	LONG mouse_x, mouse_y; // ¸¶¿ì½º ÁÂÇ¥
 	COLORREF background_color = COLOR_WHITE;
 
+	struct {
+		int x, y, width, height;
+	} view;
+
 	char** worldmesh;
 
-	int screen_x, screen_y;
 	const int scene_width, scene_height;
 	const int view_width, view_height;
 	const int port_width, port_height;
@@ -94,6 +100,7 @@ private:
 	double delta_time;
 
 	PAINTSTRUCT painter;
+	int screen_x, screen_y;
 
 	vector<GameInstance*> instances;
 	map<WPARAM, GameInput*> key_checkers;

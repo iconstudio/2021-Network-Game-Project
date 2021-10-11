@@ -47,18 +47,10 @@
 #include <chrono>
 #include <random>
 
-using std::shared_ptr;
-using std::unique_ptr;
-using std::make_shared;
-using std::make_unique;
-using std::deque;
-using std::vector;
-using std::list;
-using std::set;
-using std::map;
-using std::string;
-using std::chrono::system_clock;
+using namespace std;
 
+#define GAME_SCENE_W 320 * 3
+#define GAME_SCENE_H 240 * 3
 #define CLIENT_W 960
 #define CLIENT_H 540
 #define VIEW_W 320

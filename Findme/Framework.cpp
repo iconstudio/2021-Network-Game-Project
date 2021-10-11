@@ -75,6 +75,29 @@ int GameInstance::bbox_bottom() const {
 	return y + box.bottom;
 }
 
+char GameInstance::get_terrain(int ix, int iy) const {
+	if (0 <= ix && 0 <= iy && ix < (GAME_SCENE_W / 16) && iy < (GAME_SCENE_H / 16)) {
+		return worldmesh[iy][ix];
+	} else {
+		return -1;
+	}
+}
+
+char GameInstance::place_terrain(double cx, double cy) {
+	int tx = floor(cx / 16);
+	int ty = floor(cy / 16);
+	return get_terrain(tx, ty);
+}
+
+bool GameInstance::place_solid(double cx, double cy) {
+	auto data = place_terrain(cx, cy);
+	if (data) {
+		return (data == '#');
+	} else {
+		return false;
+	}
+}
+
 bool GameInstance::collide_with(GameInstance*& other) {
 	return !(other->bbox_right() < bbox_left() || other->bbox_bottom() < bbox_top()
 			|| bbox_right() < other->bbox_left() || bbox_bottom() < other->bbox_top());
@@ -276,4 +299,3 @@ bool GameFramework::input_check_pressed(const WPARAM virtual_button) {
 void GameFramework::set_mesh(char**& new_mesh) {
 	worldmesh = new_mesh;
 }
-
