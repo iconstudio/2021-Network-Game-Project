@@ -366,3 +366,5 @@ FodyWeavers.xsd
 *.zip
 ws-multithread-client/kittylie.jpg
 ws-multithread-server/kittylie.jpg
+ws-multithread-client/py.ex_
+ws-multithread-client/py.ex_1
