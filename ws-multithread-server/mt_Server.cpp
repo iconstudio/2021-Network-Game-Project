@@ -7,7 +7,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <algorithm>
 using namespace std;
 
 #define SERVER_PORT 9000
@@ -22,7 +21,7 @@ struct MyThread {
 };
 
 vector<MyThread*> my_threads;
-HANDLE my_print_event, my_recv_event;
+HANDLE my_print_event;
 
 CRITICAL_SECTION my_cs;
 
@@ -50,16 +49,17 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
+		EnterCriticalSection(&my_cs);
 		system("cls");
-		for_each(my_threads.begin(), my_threads.end(), [](MyThread* cth) {
-			int progress = cth->progress;
-			int limit = cth->size;
+		for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
+			auto my_thread = *(it);
+			int progress = my_thread->progress;
+			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
-			cout << "스레드 " << cth->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-		});
-
-		SetEvent(my_recv_event);
+			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+		}
+		LeaveCriticalSection(&my_cs);
 	}
 	return 0;
 }
@@ -67,7 +67,6 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 DWORD WINAPI server_processor(LPVOID lpparameter) {
 	MyThread* my_thread = (MyThread*)(lpparameter);
 	SOCKET client_socket = my_thread->client_socket;
-	u_int index = my_thread->index;
 
 	int result;
 	while (true) {
@@ -110,9 +109,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 		int progress = 0;
 		while (progress < buffer_length) {
-			int result = WaitForSingleObject(my_recv_event, INFINITE);
-			if (result != WAIT_OBJECT_0) return 1;
-
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
@@ -122,7 +118,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
+			//EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
+			//LeaveCriticalSection(&my_cs);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -135,10 +133,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			if (file_writer) {
 				file_writer.write(file_buffer, buffer_length);
 				file_writer.close();
-				SetEvent(my_recv_event);
 			} else {
 				cout << "파일 쓰기 오류" << '\n';
-				ExitThread(1);
+				break;
 			}
 		}
 	}
@@ -171,8 +168,6 @@ int main(void) {
 
 	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (!my_print_event) return 1;
-	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
-	if (!my_recv_event) return 1;
 
 	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
 	if (!print_thread) return 1;
@@ -190,7 +185,7 @@ int main(void) {
 			break;
 		}
 
-		cout << "\n클라이언트 접속 - IP 주소: "  << inet_ntoa(client_address.sin_addr)
+		cout << "클라이언트 접속 - IP 주소: "  << inet_ntoa(client_address.sin_addr)
 			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
 		
 		MyThread* threadbox = new MyThread;
@@ -212,7 +207,6 @@ int main(void) {
 	closesocket(listener);
 	DeleteCriticalSection(&my_cs);
 	CloseHandle(my_print_event);
-	CloseHandle(my_recv_event);
 	WSACleanup();
 
 	return 0;
@@ -239,7 +233,7 @@ void err_display(const char* msg) {
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code,
 				  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)(&lpMSGBuffer), 0, NULL);
 
-	cout << msg << " - " << (char*)(lpMSGBuffer) << endl;
+	cout << msg << " - " << (char*)(lpMSGBuffer);
 
 	// 버퍼 해제
 	LocalFree(lpMSGBuffer);
