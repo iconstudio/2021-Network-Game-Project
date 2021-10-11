@@ -113,9 +113,9 @@ DWORD WINAPI server_thread(LPVOID lpparameter) {
 			}
 
 			progress += result;
-			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
 			my_thread->size = buffer_length;
+			EnterCriticalSection(&my_cs);
 			print_progress();
 			LeaveCriticalSection(&my_cs);
 		}
