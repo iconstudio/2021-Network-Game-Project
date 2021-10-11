@@ -50,7 +50,7 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
-		//EnterCriticalSection(&my_cs);
+		EnterCriticalSection(&my_cs);
 		system("cls");
 		for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
 			auto my_thread = *(it);
@@ -60,7 +60,9 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 		}
-		//LeaveCriticalSection(&my_cs);
+		LeaveCriticalSection(&my_cs);
+
+		SetEvent(my_recv_event);
 	}
 	return 0;
 }
@@ -204,8 +206,6 @@ int main(void) {
 			closesocket(client_socket);
 		}
 	}
-
-	cout << "서버 종료" << endl;
 
 	closesocket(listener);
 	DeleteCriticalSection(&my_cs);
