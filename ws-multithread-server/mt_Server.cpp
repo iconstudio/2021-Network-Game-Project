@@ -22,7 +22,6 @@ struct MyThread {
 vector<MyThread*> my_threads;
 int my_recv_count = 0;
 
-HANDLE my_print_event;
 HANDLE my_recv_event;
 
 CRITICAL_SECTION my_cs;
@@ -46,33 +45,6 @@ int receive_packet(SOCKET sock, char* buffer, int length) {
 	return progress;
 }
 
-DWORD WINAPI print_processor(LPVOID lpparameter) {
-	while (true) {
-		int result = WaitForSingleObject(my_print_event, INFINITE);
-		if (result != WAIT_OBJECT_0) return 1;
-
-		EnterCriticalSection(&my_cs);
-		auto my_size = my_threads.size();
-		LeaveCriticalSection(&my_cs);
-
-		system("cls");
-		for (int i = 0; i < my_size; ++i) {
-			EnterCriticalSection(&my_cs);
-			auto my_thread = my_threads.at(i);
-			LeaveCriticalSection(&my_cs);
-
-			int progress = my_thread->progress;
-			int limit = my_thread->size;
-			int percent = ((double)(progress) / (double)(limit)) * 100;
-
-			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-		}
-
-		SetEvent(my_recv_event);
-	}
-	return 0;
-}
-
 void print_progress() {
 	system("cls");
 	for (auto it = my_threads.cbegin(); it != my_threads.cend(); ++it) {
@@ -85,7 +57,11 @@ void print_progress() {
 	}
 }
 
-DWORD WINAPI server_processor(LPVOID lpparameter) {
+DWORD WINAPI print_thread(LPVOID lpparameter) {
+
+}
+
+DWORD WINAPI server_thread(LPVOID lpparameter) {
 	MyThread* my_thread = (MyThread*)(lpparameter);
 	SOCKET client_socket = my_thread->client_socket;
 
@@ -137,18 +113,10 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
+			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
 			my_thread->size = buffer_length;
-
-			EnterCriticalSection(&my_cs);
-			if (my_threads.size() <= ++my_recv_count) {
-				ResetEvent(my_recv_event);
-				my_recv_count = 0;
-				print_progress();
-				SetEvent(my_recv_event);
-
-				//SetEvent(my_print_event);
-			}
+			print_progress();
 			LeaveCriticalSection(&my_cs);
 		}
 		if (0 == progress) break;
@@ -167,13 +135,11 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 	}
 
 	closesocket(client_socket);
-
 	return 0;
 }
 
 int main(void) {
 	WSADATA wsa;
-
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
 
 	SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
@@ -191,14 +157,8 @@ int main(void) {
 	result = listen(listener, SOMAXCONN);
 	if (SOCKET_ERROR == result) err_quit("listen");
 
-	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (!my_print_event) return 1;
-
 	my_recv_event = CreateEvent(NULL, TRUE, TRUE, NULL);
 	if (!my_recv_event) return 1;
-
-	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
-	if (!print_thread) return 1;
 
 	my_threads.reserve(THREADS_MAX);
 	InitializeCriticalSection(&my_cs);
@@ -216,29 +176,27 @@ int main(void) {
 		cout << "클라이언트 접속 - IP 주소: "  << inet_ntoa(client_address.sin_addr)
 			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
 		
-		MyThread* threadbox = new MyThread;
-		threadbox->client_socket = client_socket;
+		MyThread* my_thread = new MyThread;
+		my_thread->client_socket = client_socket;
 
-		HANDLE my_thread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
-		threadbox->index = (u_int)my_thread;
+		HANDLE hthread = CreateThread(NULL, 0, server_thread, my_thread, 0, NULL);
+		my_thread->index = (u_int)hthread;
 
-		if (my_thread) {
+		if (hthread) {
 			EnterCriticalSection(&my_cs);
-			my_threads.push_back(threadbox);
+			my_threads.push_back(my_thread);
 			LeaveCriticalSection(&my_cs);
-			CloseHandle(my_thread);
+			CloseHandle(hthread);
 		} else {
-			delete threadbox;
+			delete my_thread;
 			closesocket(client_socket);
 		}
 	}
 
 	closesocket(listener);
 	DeleteCriticalSection(&my_cs);
-	CloseHandle(my_print_event);
 	CloseHandle(my_recv_event);
 	WSACleanup();
-
 	return 0;
 }
 
