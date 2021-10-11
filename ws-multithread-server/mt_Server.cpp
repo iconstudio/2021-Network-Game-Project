@@ -24,7 +24,7 @@ struct MyThread {
 CRITICAL_SECTION my_cs;
 HANDLE my_print_event;
 HANDLE my_recv_event;
-vector<HANDLE> my_threads;
+//vector<HANDLE> my_threads;
 vector<MyThread*> my_threads_info;
 
 void err_quit(const char* msg);
@@ -51,21 +51,18 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
-		WaitForMultipleObjects(my_threads.size(), my_threads.data(), TRUE, INFINITE);
-
-		ResetEvent(my_recv_event);
-
 		system("cls");
-		EnterCriticalSection(&my_cs);
 		for (auto it = my_threads_info.begin(); it != my_threads_info.end(); ++it) {
 			auto my_thread = *(it);
+			//EnterCriticalSection(&my_cs);
 			int progress = my_thread->progress;
 			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+			//LeaveCriticalSection(&my_cs);
+			Sleep(800);
 		}
-		LeaveCriticalSection(&my_cs);
 
 		SetEvent(my_recv_event);
 	}
@@ -107,9 +104,11 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		}
 
 		EnterCriticalSection(&my_cs);
-		my_thread->size = buffer_length;
+		//my_threads.push_back(hthread);
+		my_threads_info.push_back(my_thread);
 		LeaveCriticalSection(&my_cs);
 
+		my_thread->size = buffer_length;
 		char* file_buffer = new char[buffer_length + 1];
 		ZeroMemory(file_buffer, buffer_length + 1);
 
@@ -118,7 +117,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			int result = WaitForSingleObject(my_recv_event, INFINITE);
 			if (result != WAIT_OBJECT_0) return 1;
 
-			//cout << my_thread->index << '\n';
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
@@ -127,10 +125,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 				break;
 			}
 
-			EnterCriticalSection(&my_cs);
 			progress += result;
 			my_thread->progress = progress;
-			LeaveCriticalSection(&my_cs);
+			ResetEvent(my_recv_event);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -203,10 +200,6 @@ int main(void) {
 		threadbox->index = hthread;
 
 		if (hthread) {
-			EnterCriticalSection(&my_cs);
-			my_threads.push_back(hthread);
-			my_threads_info.push_back(threadbox);
-			LeaveCriticalSection(&my_cs);
 		} else {
 			delete threadbox;
 			closesocket(client_socket);
