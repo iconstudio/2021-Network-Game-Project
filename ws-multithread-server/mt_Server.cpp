@@ -1,9 +1,10 @@
 #pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
-#define THREADS_MAX 64
+#define THREADS_MAX 2
 
 #include <WinSock2.h>
 #include <stdio.h>
@@ -14,15 +15,17 @@ using namespace std;
 
 struct MyThread {
 	SOCKET client_socket;
-	u_int index;
+	HANDLE index;
 	int progress = 0;
 	int size = 1;
 };
 
+//MyThread* my_threads_pair[THREADS_MAX];
 CRITICAL_SECTION my_cs;
 HANDLE my_print_event;
 HANDLE my_recv_event;
-vector<MyThread*> my_threads;
+vector<HANDLE> my_threads;
+vector<MyThread*> my_threads_info;
 
 void err_quit(const char* msg);
 void err_display(const char* msg);
@@ -48,23 +51,22 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
 
+		WaitForMultipleObjects(my_threads.size(), my_threads.data(), TRUE, INFINITE);
+
 		ResetEvent(my_recv_event);
 
 		system("cls");
-		//EnterCriticalSection(&my_cs);
-		for (auto it = my_threads.begin(); it != my_threads.end(); ++it) {
+		EnterCriticalSection(&my_cs);
+		for (auto it = my_threads_info.begin(); it != my_threads_info.end(); ++it) {
 			auto my_thread = *(it);
-			EnterCriticalSection(&my_cs);
 			int progress = my_thread->progress;
 			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-			LeaveCriticalSection(&my_cs);
 		}
-		//LeaveCriticalSection(&my_cs);
+		LeaveCriticalSection(&my_cs);
 
-		SetEvent(my_recv_event);
 		SetEvent(my_recv_event);
 	}
 	return 0;
@@ -116,6 +118,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			int result = WaitForSingleObject(my_recv_event, INFINITE);
 			if (result != WAIT_OBJECT_0) return 1;
 
+			//cout << my_thread->index << '\n';
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
@@ -172,14 +175,12 @@ int main(void) {
 
 	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (!my_print_event) return 1;
-
 	my_recv_event = CreateEvent(NULL, TRUE, TRUE, NULL);
 	if (!my_recv_event) return 1;
-
 	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
 	if (!print_thread) return 1;
 
-	my_threads.reserve(THREADS_MAX);
+	my_threads_info.reserve(THREADS_MAX);
 	InitializeCriticalSection(&my_cs);
 
 	cout << "서버 실행 중" << '\n';
@@ -198,12 +199,13 @@ int main(void) {
 		MyThread* threadbox = new MyThread;
 		threadbox->client_socket = client_socket;
 
-		HANDLE my_thread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
-		threadbox->index = (u_int)my_thread;
+		HANDLE hthread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
+		threadbox->index = hthread;
 
-		if (my_thread) {
+		if (hthread) {
 			EnterCriticalSection(&my_cs);
-			my_threads.push_back(threadbox);
+			my_threads.push_back(hthread);
+			my_threads_info.push_back(threadbox);
 			LeaveCriticalSection(&my_cs);
 		} else {
 			delete threadbox;
@@ -245,4 +247,3 @@ void err_display(const char* msg) {
 
 	LocalFree(lpMSGBuffer);
 }
-
