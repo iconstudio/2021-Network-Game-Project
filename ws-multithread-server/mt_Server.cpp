@@ -49,7 +49,6 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 	while (true) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
 		if (result != WAIT_OBJECT_0) return 1;
-		ResetEvent(my_recv_event);
 
 		EnterCriticalSection(&my_cs);
 		system("cls");
@@ -103,15 +102,21 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		}
 
 		//
+		EnterCriticalSection(&my_cs);
+		my_threads.push_back(my_thread);
+		my_thread->size = buffer_length;
+		LeaveCriticalSection(&my_cs);
+
 		char* file_buffer = new char[buffer_length + 1];
 		ZeroMemory(file_buffer, buffer_length + 1);
 
-		my_thread->size = buffer_length;
 		int progress = 0;
 		while (progress < buffer_length) {
 			int result = WaitForSingleObject(my_recv_event, INFINITE);
 			if (result != WAIT_OBJECT_0) return 1;
 
+			ResetEvent(my_recv_event);
+			cout << my_thread->index << '\n';
 			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
@@ -121,9 +126,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			}
 
 			progress += result;
-			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
-			LeaveCriticalSection(&my_cs);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -170,7 +173,7 @@ int main(void) {
 	if (!my_print_event) return 1;
 
 	my_recv_event = CreateEvent(NULL, TRUE, TRUE, NULL);
-	if (!my_print_event) return 1;
+	if (!my_recv_event) return 1;
 
 	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
 	if (!print_thread) return 1;
@@ -198,10 +201,6 @@ int main(void) {
 		threadbox->index = (u_int)my_thread;
 
 		if (my_thread) {
-			EnterCriticalSection(&my_cs);
-			my_threads.push_back(threadbox);
-			LeaveCriticalSection(&my_cs);
-
 			CloseHandle(my_thread);
 		} else {
 			delete threadbox;
