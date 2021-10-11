@@ -20,11 +20,8 @@ struct MyThread {
 	int size = 1;
 };
 
-//MyThread* my_threads_pair[THREADS_MAX];
 CRITICAL_SECTION my_cs;
-HANDLE my_print_event;
-HANDLE my_recv_event;
-//vector<HANDLE> my_threads;
+HANDLE my_print_event, my_recv_event;
 vector<MyThread*> my_threads_info;
 
 void err_quit(const char* msg);
@@ -52,17 +49,17 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 		if (result != WAIT_OBJECT_0) return 1;
 
 		system("cls");
+		EnterCriticalSection(&my_cs);
 		for (auto it = my_threads_info.begin(); it != my_threads_info.end(); ++it) {
 			auto my_thread = *(it);
-			//EnterCriticalSection(&my_cs);
 			int progress = my_thread->progress;
 			int limit = my_thread->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
 			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-			//LeaveCriticalSection(&my_cs);
-			Sleep(1);
+			Sleep(10);
 		}
+		LeaveCriticalSection(&my_cs);
 
 		SetEvent(my_recv_event);
 	}
@@ -104,7 +101,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		}
 
 		EnterCriticalSection(&my_cs);
-		//my_threads.push_back(hthread);
 		my_threads_info.push_back(my_thread);
 		LeaveCriticalSection(&my_cs);
 
@@ -127,7 +123,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 			progress += result;
 			my_thread->progress = progress;
-			ResetEvent(my_recv_event);
+			//ResetEvent(my_recv_event);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
@@ -146,7 +142,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 	}
 
 	closesocket(client_socket);
-
 	return 0;
 }
 
@@ -172,7 +167,7 @@ int main(void) {
 
 	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (!my_print_event) return 1;
-	my_recv_event = CreateEvent(NULL, TRUE, TRUE, NULL);
+	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
 	if (!my_recv_event) return 1;
 	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
 	if (!print_thread) return 1;
@@ -211,7 +206,6 @@ int main(void) {
 	CloseHandle(my_print_event);
 	CloseHandle(my_recv_event);
 	WSACleanup();
-
 	return 0;
 }
 
