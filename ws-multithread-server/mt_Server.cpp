@@ -3,7 +3,7 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define SERVER_PORT 9000
 #define INFO_LENGTH 1024
-#define THREADS_MAX 2
+#define THREADS_NUM 2
 
 #include <WinSock2.h>
 #include <stdio.h>
@@ -49,13 +49,12 @@ DWORD WINAPI print_processor(LPVOID lpparameter) {
 
 		system("cls");
 		EnterCriticalSection(&my_cs);
-		for (auto it = my_threads_info.begin(); it != my_threads_info.end(); ++it) {
-			auto my_thread = *(it);
-			int progress = my_thread->progress;
-			int limit = my_thread->size;
+		for (auto it : my_threads_info) {
+			int progress = it->progress;
+			int limit = it->size;
 			int percent = ((double)(progress) / (double)(limit)) * 100;
 
-			cout << "스레드 " << my_thread->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
+			cout << "스레드 " << it->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
 		}
 		LeaveCriticalSection(&my_cs);
 
@@ -172,7 +171,7 @@ int main(void) {
 	HANDLE print_thread = CreateThread(NULL, 0, print_processor, NULL, 0, NULL);
 	if (!print_thread) return 1;
 
-	my_threads_info.reserve(THREADS_MAX);
+	my_threads_info.reserve(THREADS_NUM);
 	InitializeCriticalSection(&my_cs);
 
 	cout << "서버 실행 중" << '\n';
@@ -194,7 +193,7 @@ int main(void) {
 		HANDLE hthread = CreateThread(NULL, 0, server_processor, threadbox, 0, NULL);
 		threadbox->index = hthread;
 
-		if (hthread == NULL) {
+		if (NULL == hthread) {
 			delete threadbox;
 			closesocket(client_socket);
 		}
