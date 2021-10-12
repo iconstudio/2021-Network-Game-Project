@@ -19,11 +19,13 @@ const int game_map_iwidth = GAME_SCENE_W / 16;
 const int game_map_iheight = GAME_SCENE_H / 16;
 char** game_map;
 
-const int enemy_number = 2000;
+const double PLAYER_MOVE_VELOCITY = km_per_hr(20);
+const int PEOPLE_NUMBER = 2000;
 
-const uniform_int_distribution<int> game_distribution;
-const default_random_engine game_random_engine;
+const uniform_int_distribution<int> w_distribution{ 16, GAME_SCENE_W - 16 };
+const uniform_int_distribution<int> h_distribution{ 16, GAME_SCENE_H - 16 };
 const random_device game_random_device;
+default_random_engine game_random_engine;
 
 oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
 
@@ -32,6 +34,21 @@ void oPlayer::on_create() {
 }
 
 void oPlayer::on_update(double frame_advance) {
+	int check_left = framework.input_check(VK_LEFT);
+	int check_right = framework.input_check(VK_RIGHT);
+	int check_up = framework.input_check(VK_UP);
+	int check_down = framework.input_check(VK_DOWN);
+
+	int input_hor = check_right - check_left;
+	if (0 != input_hor) {
+		x += input_hor * frame_advance * PLAYER_MOVE_VELOCITY;
+	}
+
+	int input_ver = check_down - check_up;
+	if (0 != input_ver) {
+		y += input_ver * frame_advance * PLAYER_MOVE_VELOCITY;
+	}
+
 	GameInstance::on_update(frame_advance);
 }
 
@@ -68,6 +85,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	framework.init();
+	framework.set_view_tracking(true);
+	framework.input_register(VK_LEFT);
+	framework.input_register(VK_RIGHT);
+	framework.input_register(VK_UP);
+	framework.input_register(VK_DOWN);
 
 	game_map = new char*[game_map_iheight];
 	for (int i = 0; i < game_map_iheight; ++i) {
@@ -77,11 +99,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	framework.background_color = COLOR_GOLD;
 
-	auto player = framework.instance_create<oPlayer>(90, 90);
-	for (int i = 0; i < enemy_number; ++i) {
-		int cx = game_distribution(game_random_engine);
+	for (int i = 0; i < PEOPLE_NUMBER; ++i) {
+		int cx = w_distribution(game_random_engine);
+		int cy = h_distribution(game_random_engine);
 
+		framework.instance_create<oFakePerson>(cx, cy);
 	}
+	auto player = framework.instance_create<oPlayer>(90, 90);
+	framework.set_view_target(player);
 
 	MSG msg;
 	while (true) {

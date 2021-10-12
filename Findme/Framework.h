@@ -36,7 +36,7 @@ public:
 	shared_ptr<GameSprite> sprite_index;
 	RECT box; // 충돌체
 	bool dead;
-	int x, y;
+	double x, y;
 	double hspeed, vspeed;
 };
 
@@ -66,17 +66,20 @@ public:
 	template<class _GameClass = GameInstance>
 	_GameClass* instance_create(int x = 0, int y = 0);
 
+	char** worldmesh;
 	LONG mouse_x, mouse_y; // 마우스 좌표
 	COLORREF background_color = COLOR_WHITE;
 
+	void set_view_tracking(bool flag);
+	void set_view_target(GameInstance* target);
+
+	bool view_enabled;
+	GameInstance* view_target;
 	struct {
 		int x, y, width, height;
 	} view;
 
-	char** worldmesh;
-
 	const int scene_width, scene_height;
-	const int view_width, view_height;
 	const int port_width, port_height;
 private:
 	template<class Predicate>

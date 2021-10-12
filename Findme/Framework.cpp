@@ -158,7 +158,8 @@ int GameInstance::raycast_dw(double distance) {
 GameFramework::GameFramework(int rw, int rh, int vw, int vh, int pw, int ph)
 	: mouse_x(0), mouse_y(0), delta_time(0.0), painter{}, elapsed(0)
 	, scene_width(rw), scene_height(rh)
-	, view_width(vw), view_height(vh), port_width(pw), port_height(ph) {
+	, view_enabled(false), view_target(nullptr), view{0, 0, vw, vh}
+	, port_width(pw), port_height(ph) {
 
 	screen_x = (CLIENT_W - port_width) * 0.5;
 	screen_y = 0;//(CLIENT_H - port_height) * 0.25;
@@ -200,14 +201,14 @@ void GameFramework::draw(HWND window) {
 	HDC surface_app = BeginPaint(window, &painter);
 
 	HDC surface_double = CreateCompatibleDC(surface_app);
-	HBITMAP m_hBit = CreateCompatibleBitmap(surface_app, view_width, view_height);
+	HBITMAP m_hBit = CreateCompatibleBitmap(surface_app, view.width, view.height);
 	HBITMAP m_oldhBit = (HBITMAP)SelectObject(surface_double, m_hBit);
 
 	// 초기화
-	Render::draw_clear(surface_double, view_width, view_height, background_color);
+	Render::draw_clear(surface_double, view.width, view.height, background_color);
 
 	HDC surface_back = CreateCompatibleDC(surface_app);
-	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, view_width, view_height);
+	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, view.width, view.height);
 	HBITMAP m_newoldBit = (HBITMAP)SelectObject(surface_back, m_newBit);
 
 	// 파이프라인
@@ -216,12 +217,12 @@ void GameFramework::draw(HWND window) {
 	});
 
 	// 이중 버퍼 -> 백 버퍼
-	BitBlt(surface_back, 0, 0, view_width, view_height, surface_double, 0, 0, SRCCOPY);
+	BitBlt(surface_back, 0, 0, view.width, view.height, surface_double, view.x, view.y, SRCCOPY);
 	Render::draw_end(surface_double, m_oldhBit, m_hBit);
 
 	// 백 버퍼 -> 화면 버퍼
 	StretchBlt(surface_app, screen_x, screen_y, port_width, port_height
-			   , surface_back, 0, 0, view_width, view_height, SRCCOPY);
+			   , surface_back, 0, 0, view.width, view.height, SRCCOPY);
 	Render::draw_end(surface_back, m_newoldBit, m_newBit);
 
 	DeleteDC(surface_back);
@@ -298,4 +299,12 @@ bool GameFramework::input_check_pressed(const WPARAM virtual_button) {
 
 void GameFramework::set_mesh(char**& new_mesh) {
 	worldmesh = new_mesh;
+}
+
+void GameFramework::set_view_tracking(bool flag) {
+	view_enabled = flag;
+}
+
+void GameFramework::set_view_target(GameInstance* target) {
+	view_target = target;
 }
