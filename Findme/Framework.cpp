@@ -4,7 +4,7 @@
 
 GameInstance::GameInstance(char** mesh)
 	: worldmesh(mesh), box{}, dead(false)
-	, x(0), y(0), hspeed(0.0), vspeed(0.0) {}
+	, x(0), y(0), hspeed(0.0), vspeed(0.0), xscale(1.0), yscale(1.0) {}
 
 GameInstance::~GameInstance() {
 	if (sprite_index)
@@ -50,7 +50,7 @@ void GameInstance::on_update(double frame_advance) {
 
 void GameInstance::on_render(HDC canvas) {
 	if (sprite_index) {
-		sprite_index->draw(canvas, x, y, 0.0, 0.0, 1.0, 1.0, 1.0);
+		sprite_index->draw(canvas, x, y, 0.0, 0.0, xscale, yscale, 1.0);
 	}
 }
 
@@ -157,12 +157,12 @@ int GameInstance::raycast_dw(double distance) {
 
 GameFramework::GameFramework(int rw, int rh, int vw, int vh, int pw, int ph)
 	: mouse_x(0), mouse_y(0), delta_time(0.0), painter{}, elapsed(0)
-	, scene_width(rw), scene_height(rh)
-	, view_enabled(false), view_target(nullptr), view{0, 0, vw, vh}
-	, port_width(pw), port_height(ph) {
-
-	screen_x = (CLIENT_W - port_width) * 0.5;
-	screen_y = 0;//(CLIENT_H - port_height) * 0.25;
+	, world_w(rw), world_h(rh)
+	, view{ 0, 0, vw, vh }, port{ 0, 0, pw, ph }
+	, view_track_enabled(false), view_target(nullptr) {
+	view.xoff = vw * 0.5;
+	view.yoff = vh * 0.5;
+	port.x = (CLIENT_W - pw) * 0.5;
 }
 
 GameFramework::~GameFramework() {}
@@ -194,6 +194,14 @@ void GameFramework::update() {
 	for_each_instances([&](GameInstance*& inst) {
 		inst->on_update(delta_time);
 	});
+
+	if (view_track_enabled) {
+		if (view_target) {
+			view.x = max(0, min(world_w - view.w, (int)view_target->x - view.xoff));
+			view.y = max(0, min(world_h - view.h, (int)view_target->y - view.yoff));
+		}
+	}
+
 	delta_start();
 }
 
@@ -201,28 +209,34 @@ void GameFramework::draw(HWND window) {
 	HDC surface_app = BeginPaint(window, &painter);
 
 	HDC surface_double = CreateCompatibleDC(surface_app);
-	HBITMAP m_hBit = CreateCompatibleBitmap(surface_app, view.width, view.height);
+	HBITMAP m_hBit = CreateCompatibleBitmap(surface_app, world_w, world_h);
 	HBITMAP m_oldhBit = (HBITMAP)SelectObject(surface_double, m_hBit);
 
 	// 초기화
-	Render::draw_clear(surface_double, view.width, view.height, background_color);
+	Render::draw_clear(surface_double, world_w, world_h, background_color);
 
 	HDC surface_back = CreateCompatibleDC(surface_app);
-	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, view.width, view.height);
+	HBITMAP m_newBit = CreateCompatibleBitmap(surface_app, view.w, view.h);
 	HBITMAP m_newoldBit = (HBITMAP)SelectObject(surface_back, m_newBit);
 
 	// 파이프라인
 	for_each_instances([&](GameInstance*& inst) {
-		inst->on_render(surface_double);
+		if (inst->sprite_index) {
+			if (!(view.x + view.w <= inst->bbox_left() || inst->bbox_right() < view.x
+				|| view.y + view.h <= inst->bbox_top() || inst->bbox_bottom() < view.y))
+				inst->on_render(surface_double);
+		} else {
+			inst->on_render(surface_double);
+		}
 	});
 
 	// 이중 버퍼 -> 백 버퍼
-	BitBlt(surface_back, 0, 0, view.width, view.height, surface_double, view.x, view.y, SRCCOPY);
+	BitBlt(surface_back, 0, 0, view.w, view.h, surface_double, view.x, view.y, SRCCOPY);
 	Render::draw_end(surface_double, m_oldhBit, m_hBit);
 
 	// 백 버퍼 -> 화면 버퍼
-	StretchBlt(surface_app, screen_x, screen_y, port_width, port_height
-			   , surface_back, 0, 0, view.width, view.height, SRCCOPY);
+	StretchBlt(surface_app, port.x, port.y, port.w, port.h
+			   , surface_back, 0, 0, view.w, view.h, SRCCOPY);
 	Render::draw_end(surface_back, m_newoldBit, m_newBit);
 
 	DeleteDC(surface_back);
@@ -302,7 +316,7 @@ void GameFramework::set_mesh(char**& new_mesh) {
 }
 
 void GameFramework::set_view_tracking(bool flag) {
-	view_enabled = flag;
+	view_track_enabled = flag;
 }
 
 void GameFramework::set_view_target(GameInstance* target) {
