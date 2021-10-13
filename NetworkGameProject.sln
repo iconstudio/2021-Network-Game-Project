@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-multithread-server", "ws
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-multithread-client", "ws-multithread-client\ws-multithread-client.vcxproj", "{AD9197D6-BBAC-4DA0-9962-02A3E593C5F9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-udp-server", "ws-udp-server\ws-udp-server.vcxproj", "{EDC012C5-C404-43EB-9A31-61B2DABDE498}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -121,6 +123,14 @@ Global
 		{AD9197D6-BBAC-4DA0-9962-02A3E593C5F9}.Release|x64.Build.0 = Release|x64
 		{AD9197D6-BBAC-4DA0-9962-02A3E593C5F9}.Release|x86.ActiveCfg = Release|Win32
 		{AD9197D6-BBAC-4DA0-9962-02A3E593C5F9}.Release|x86.Build.0 = Release|Win32
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Debug|x64.ActiveCfg = Debug|x64
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Debug|x64.Build.0 = Debug|x64
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Debug|x86.ActiveCfg = Debug|Win32
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Debug|x86.Build.0 = Debug|Win32
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Release|x64.ActiveCfg = Release|x64
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Release|x64.Build.0 = Release|x64
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Release|x86.ActiveCfg = Release|Win32
+		{EDC012C5-C404-43EB-9A31-61B2DABDE498}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
