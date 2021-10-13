@@ -36,8 +36,8 @@ public:
 	shared_ptr<GameSprite> sprite_index;
 	RECT box; // 충돌체
 	bool dead;
-	double x, y;
-	double hspeed, vspeed;
+	double x, y, hspeed, vspeed;
+	double xscale, yscale;
 };
 
 class GameFramework {
@@ -53,11 +53,6 @@ public:
 	void on_mouseup(WPARAM button, LPARAM cursor);
 	void on_keydown(WPARAM key);
 	void on_keyup(WPARAM key);
-
-	void delta_start();
-	void delta_inspect();
-	double get_elapsed_second() const;
-
 	void input_register(WPARAM virtual_button);
 	bool input_check(WPARAM virtual_button);
 	bool input_check_pressed(WPARAM virtual_button);
@@ -66,22 +61,21 @@ public:
 	template<class _GameClass = GameInstance>
 	_GameClass* instance_create(int x = 0, int y = 0);
 
-	char** worldmesh;
 	LONG mouse_x, mouse_y; // 마우스 좌표
 	COLORREF background_color = COLOR_WHITE;
+	char** worldmesh;
+	const int world_w, world_h;
 
 	void set_view_tracking(bool flag);
 	void set_view_target(GameInstance* target);
-
-	bool view_enabled;
-	GameInstance* view_target;
 	struct {
-		int x, y, width, height;
-	} view;
-
-	const int scene_width, scene_height;
-	const int port_width, port_height;
+		int x, y, w, h, xoff, yoff;
+	} view, port;
 private:
+	void delta_start();
+	void delta_inspect();
+	double get_elapsed_second() const;
+
 	template<class Predicate>
 	void for_each_instances(Predicate predicate);
 
@@ -103,10 +97,11 @@ private:
 	double delta_time;
 
 	PAINTSTRUCT painter;
-	int screen_x, screen_y;
 
 	vector<GameInstance*> instances;
 	map<WPARAM, GameInput*> key_checkers;
+	bool view_track_enabled;
+	GameInstance* view_target;
 };
 
 template<class _GameClass>
