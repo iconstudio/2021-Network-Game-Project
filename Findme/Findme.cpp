@@ -3,6 +3,9 @@
 #include "stdafx.h"
 #include "Findme.h"
 
+#pragma comment(lib, "shcore.lib")
+#include <shellscalingapi.h>
+
 #define MAX_LOADSTRING 100
 #define RENDER_TIMER_ID 1
 
@@ -24,7 +27,6 @@ const int PEOPLE_NUMBER = 2000;
 
 const uniform_int_distribution<int> w_distribution{ 16, GAME_SCENE_W - 16 };
 const uniform_int_distribution<int> h_distribution{ 16, GAME_SCENE_H - 16 };
-const random_device game_random_device;
 default_random_engine game_random_engine;
 
 oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
@@ -40,13 +42,16 @@ void oPlayer::on_update(double frame_advance) {
 	int check_down = framework.input_check(VK_DOWN);
 
 	int input_hor = check_right - check_left;
-	if (0 != input_hor) {
-		x += input_hor * frame_advance * PLAYER_MOVE_VELOCITY;
+	int input_ver = check_down - check_up;
+	double move_dir = point_direction(0, 0, input_hor, input_ver);
+	if (input_hor != 0 || input_ver != 0) {
+		x += lengthdir_x(PLAYER_MOVE_VELOCITY * frame_advance, move_dir);
+		y += lengthdir_y(PLAYER_MOVE_VELOCITY * frame_advance, move_dir);
 	}
 
-	int input_ver = check_down - check_up;
-	if (0 != input_ver) {
-		y += input_ver * frame_advance * PLAYER_MOVE_VELOCITY;
+	if (0 != input_hor) {
+		//x += input_hor * PLAYER_MOVE_VELOCITY;
+		xscale = input_hor;
 	}
 
 	GameInstance::on_update(frame_advance);
@@ -76,6 +81,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_ int       nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+	::SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_FINDME, szWindowClass, MAX_LOADSTRING);
@@ -135,8 +141,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		// 렌더링 타이머
 		case WM_TIMER:
 		{
-			Render::refresh(hwnd);
 			framework.update();
+			Render::refresh(hwnd);
 		}
 		break;
 
