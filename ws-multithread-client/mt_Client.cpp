@@ -5,8 +5,8 @@
 #include <WinSock2.h>
 #include <stdio.h>
 
-#define SERVER_IP "172.30.1.11"
-//#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "172.30.1.11"
+#define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 9000
 #define PATH_SIZE 512
 
