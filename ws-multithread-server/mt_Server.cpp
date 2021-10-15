@@ -26,22 +26,6 @@ vector<MyThread*> my_threads_info;
 void err_quit(const char* msg);
 void err_display(const char* msg);
 
-int receive_packet(SOCKET sock, char* buffer, int length) {
-	int result, progress = 0;
-	while (progress < length) {
-		result = recv(sock, buffer + progress, length - progress, 0);
-		if (SOCKET_ERROR == result) {
-			return SOCKET_ERROR;
-		} else if (0 == result) {
-			break;
-		}
-
-		progress += result;
-	}
-
-	return progress;
-}
-
 DWORD WINAPI print_processor(LPVOID lpparameter) {
 	while (true) {
 		int result = WaitForSingleObject(my_print_event, INFINITE);
@@ -71,7 +55,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 	while (true) {
 		int buffer_length = 0;
 
-		result = receive_packet(client_socket, (char*)(&buffer_length), sizeof(int));
+		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 1");
 			break;
@@ -81,7 +65,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 		char* file_path = new char[buffer_length + 1];
 		ZeroMemory(file_path, buffer_length + 1);
-		result = receive_packet(client_socket, file_path, buffer_length);
+		result = recv(client_socket, file_path, buffer_length, MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 2");
 			break;
@@ -89,7 +73,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
-		result = receive_packet(client_socket, (char*)(&buffer_length), sizeof(int));
+		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 3");
 			break;
@@ -127,16 +111,13 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 		}
 		if (0 == progress) break;
 
-		if (file_path && file_buffer) {
-			std::ofstream file_writer(file_path, ios::binary);
-
-			if (file_writer) {
-				file_writer.write(file_buffer, buffer_length);
-				file_writer.close();
-			} else {
-				cout << "파일 쓰기 오류" << '\n';
-				break;
-			}
+		ofstream file_writer(file_path, ios::binary);
+		if (file_writer) {
+			file_writer.write(file_buffer, buffer_length);
+			file_writer.close();
+		} else {
+			cout << "파일 쓰기 오류" << '\n';
+			break;
 		}
 	}
 
