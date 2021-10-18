@@ -29,7 +29,7 @@ const uniform_int_distribution<int> w_distribution{ 16, GAME_SCENE_W - 16 };
 const uniform_int_distribution<int> h_distribution{ 16, GAME_SCENE_H - 16 };
 default_random_engine game_random_engine;
 
-oPlayer::oPlayer(char** mesh) : GameInstance(mesh) {}
+oPlayer::oPlayer(GameMesh***& mesh) : GameInstance(mesh) {}
 
 void oPlayer::on_create() {
 	set_sprite(sHumanStand);
@@ -61,7 +61,7 @@ void oPlayer::on_render(HDC canvas) {
 	GameInstance::on_render(canvas);
 }
 
-oFakePerson::oFakePerson(char** mesh) {}
+oFakePerson::oFakePerson(GameMesh***& mesh) : GameInstance(mesh) {}
 
 void oFakePerson::on_create() {
 	set_sprite(sHumanStand);

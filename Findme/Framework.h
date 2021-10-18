@@ -3,11 +3,16 @@
 #include "Sprite.h"
 
 
+class GameMesh : public RECT {
+public:
+	char data = '0';
+};
+
 class GameInstance {
 public:
 	GameInstance(GameInstance&) = default;
 	GameInstance(GameInstance&&) = default;
-	GameInstance(char** mesh = nullptr);
+	GameInstance(GameMesh***& mesh);
 	virtual ~GameInstance();
 
 	virtual void on_create();
@@ -21,17 +26,18 @@ public:
 	int bbox_right() const;
 	int bbox_bottom() const;
 
-	char get_terrain(int ix, int iy) const;
-	char place_terrain(double cx, double cy);
+	GameMesh* get_terrain(int ix, int iy) const;
+	GameMesh* place_terrain(double cx, double cy);
 	bool place_solid(double cx, double cy);
 
+	bool collide_with(RECT& other);
 	bool collide_with(GameInstance*& other);
 	int raycast_lt(double distance);
 	int raycast_rt(double distance);
 	int raycast_up(double distance);
 	int raycast_dw(double distance);
 
-	char** const worldmesh;
+	GameMesh*** const worldmesh;
 
 	shared_ptr<GameSprite> sprite_index;
 	RECT box; // 충돌체
@@ -57,13 +63,13 @@ public:
 	bool input_check(WPARAM virtual_button);
 	bool input_check_pressed(WPARAM virtual_button);
 
-	void set_mesh(char**& new_mesh);
+	void set_mesh(GameMesh***& new_mesh);
 	template<class _GameClass = GameInstance>
 	_GameClass* instance_create(int x = 0, int y = 0);
 
 	LONG mouse_x, mouse_y; // 마우스 좌표
 	COLORREF background_color = COLOR_WHITE;
-	char** worldmesh;
+	GameMesh*** worldmesh;
 	const int world_w, world_h;
 
 	void set_view_tracking(bool flag);

@@ -5,7 +5,7 @@
 
 class oPlayer : public GameInstance {
 public:
-	oPlayer(char** mesh);
+	oPlayer(GameMesh***& mesh);
 
 	virtual void on_create();
 	virtual void on_update(double frame_advance);
@@ -14,7 +14,7 @@ public:
 
 class oFakePerson : public GameInstance {
 public:
-	oFakePerson(char** mesh);
+	oFakePerson(GameMesh***& mesh);
 
 	virtual void on_create();
 	virtual void on_update(double frame_advance);
