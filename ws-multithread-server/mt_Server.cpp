@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define SERVER_PORT 9000
-#define INFO_LENGTH 1024
+#define PATH_LENGTH 1024
 #define THREADS_NUM 2
 
 #include <WinSock2.h>
@@ -51,11 +51,9 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 	MyThread* my_thread = (MyThread*)(lpparameter);
 	SOCKET client_socket = my_thread->client_socket;
 
-	int result;
 	while (true) {
 		int buffer_length = 0;
-
-		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
+		int result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 1");
 			break;
@@ -63,8 +61,8 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
-		char* file_path = new char[buffer_length + 1];
-		ZeroMemory(file_path, buffer_length + 1);
+		char file_path[PATH_LENGTH];
+		ZeroMemory(file_path, PATH_LENGTH);
 		result = recv(client_socket, file_path, buffer_length, MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 2");
