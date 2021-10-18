@@ -56,7 +56,11 @@ void GameInstance::on_render(HDC canvas) {
 
 void GameInstance::set_sprite(shared_ptr<GameSprite>& sprite) {
 	sprite_index = sprite;
-	CopyRect(&box, &(sprite->bbox));
+	set_mask(sprite->bbox);
+}
+
+void GameInstance::set_mask(RECT& mask) {
+	CopyRect(&box, &mask);
 }
 
 int GameInstance::bbox_left() const {
@@ -90,9 +94,9 @@ GameMesh* GameInstance::place_terrain(double cx, double cy) {
 }
 
 bool GameInstance::place_solid(double cx, double cy) {
-	auto data = place_terrain(cx, cy);
-	if (data) {
-		return (data->data == '#');
+	auto mesh = place_terrain(cx, cy);
+	if (mesh) {
+		return (mesh->data == '#');
 	} else {
 		return false;
 	}
@@ -202,8 +206,9 @@ void GameFramework::update() {
 
 	if (view_track_enabled) {
 		if (view_target) {
-			view.x = max(0, min(world_w - view.w, (int)view_target->x - view.xoff));
-			view.y = max(0, min(world_h - view.h, (int)view_target->y - view.yoff));
+			//view.x = max(0, min(world_w - view.w, (int)view_target->x - view.xoff));
+			//view.y = max(0, min(world_h - view.h, (int)view_target->y - view.yoff));
+			set_view_pos(view_target->x, view_target->y);
 		}
 	}
 
@@ -326,4 +331,9 @@ void GameFramework::set_view_tracking(bool flag) {
 
 void GameFramework::set_view_target(GameInstance* target) {
 	view_target = target;
+}
+
+void GameFramework::set_view_pos(int vx, int vy) {
+	view.x = max(0, min(world_w - view.w, vx - view.xoff));
+	view.y = max(0, min(world_h - view.h, vy - view.yoff));
 }

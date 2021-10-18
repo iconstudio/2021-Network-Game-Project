@@ -21,6 +21,7 @@ public:
 	virtual void on_render(HDC canvas);
 
 	void set_sprite(shared_ptr<GameSprite>& sprite);
+	void set_mask(RECT& mask);
 	int bbox_left() const;
 	int bbox_top() const;
 	int bbox_right() const;
@@ -74,6 +75,7 @@ public:
 
 	void set_view_tracking(bool flag);
 	void set_view_target(GameInstance* target);
+	void set_view_pos(int vx, int vy);
 	struct {
 		int x, y, w, h, xoff, yoff;
 	} view, port;
