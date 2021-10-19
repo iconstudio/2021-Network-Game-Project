@@ -72,7 +72,6 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
-		// recv를 왜 쓰냐? recvn 쓰면 되는데?
 		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 3");
@@ -89,7 +88,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			코드가 너무 난잡한데?
 		*/
 		EnterCriticalSection(&my_cs);
-		my_threads_info.push_back(my_thread);
+		my_threads_info.push_back(my_thread); // 동적 좋아해요? 잘은 써요?
 		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
 
@@ -109,6 +108,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 
 			/*
 				recvn 쓰면 아래 임계 영역 안써도 되지 않음?
+				recv를 왜 쓰냐? recvn 쓰면 되는데?
 			*/
 			result = recv(client_socket, buffer, BUFFER_SIZE, 0);
 
@@ -124,7 +124,8 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			my_thread->progress = progress;
 			LeaveCriticalSection(&my_cs);
 			file_writer.write(buffer, result);
-
+			
+			Sleep(1);
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
