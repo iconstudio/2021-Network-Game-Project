@@ -6,6 +6,7 @@
 
 #include <WinSock2.h>
 #include <stdio.h>
+#include <iostream>
 using namespace std;
 
 void err_quit(const char* msg);
