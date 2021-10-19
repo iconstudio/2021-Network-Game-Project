@@ -4,6 +4,7 @@
 #define SERVER_PORT 9000
 #define PATH_LENGTH 1024
 #define THREADS_NUM 2
+#define BUFFER_SIZE 1024
 
 #include <WinSock2.h>
 #include <stdio.h>
@@ -71,6 +72,7 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
+		// recv를 왜 쓰냐? recvn 쓰면 되는데?
 		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
 		if (SOCKET_ERROR == result) {
 			err_display("receive 3");
@@ -79,20 +81,37 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			break;
 		}
 
+		/*
+			벡터를 안 쓰면 안되냐? 공유 자원 왜 쓰지?
+			동적 할당은 파일의 정보를 모를 때 쓴다!!!!
+			벡터 쓸 이유가 있나?
+
+			코드가 너무 난잡한데?
+		*/
 		EnterCriticalSection(&my_cs);
 		my_threads_info.push_back(my_thread);
 		my_thread->size = buffer_length;
 		LeaveCriticalSection(&my_cs);
 
-		char* file_buffer = new char[buffer_length + 1];
-		ZeroMemory(file_buffer, buffer_length + 1);
+		ofstream file_writer(file_path, ios::binary);
+		if (!file_writer) {
+			cout << "파일 쓰기 오류" << '\n';
+			break;
+		}
 
 		int progress = 0;
+		char buffer[BUFFER_SIZE + 1];
+		ZeroMemory(buffer, BUFFER_SIZE + 1);
+
 		while (progress < buffer_length) {
 			int result = WaitForSingleObject(my_recv_event, INFINITE);
 			if (result != WAIT_OBJECT_0) return 1;
 
-			result = recv(client_socket, file_buffer + progress, buffer_length - progress, 0);
+			/*
+				recvn 쓰면 아래 임계 영역 안써도 되지 않음?
+			*/
+			result = recv(client_socket, buffer, BUFFER_SIZE, 0);
+
 			if (SOCKET_ERROR == result) {
 				err_display("receive 4");
 				break;
@@ -104,19 +123,13 @@ DWORD WINAPI server_processor(LPVOID lpparameter) {
 			EnterCriticalSection(&my_cs);
 			my_thread->progress = progress;
 			LeaveCriticalSection(&my_cs);
+			file_writer.write(buffer, result);
 
 			SetEvent(my_print_event);
 		}
 		if (0 == progress) break;
 
-		ofstream file_writer(file_path, ios::binary);
-		if (file_writer) {
-			file_writer.write(file_buffer, buffer_length);
-			file_writer.close();
-		} else {
-			cout << "파일 쓰기 오류" << '\n';
-			break;
-		}
+		file_writer.close();
 	}
 
 	closesocket(client_socket);

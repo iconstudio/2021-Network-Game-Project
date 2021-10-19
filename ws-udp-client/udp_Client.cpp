@@ -11,6 +11,10 @@
 #include <iostream>
 using namespace std;
 
+int main() {
+	return 0;
+}
+
 void err_quit(const char* msg) {
 	LPVOID lpMSGBuffer;
 
