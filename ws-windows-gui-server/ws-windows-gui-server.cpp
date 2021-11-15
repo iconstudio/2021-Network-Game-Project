@@ -1,4 +1,7 @@
-﻿#pragma comment(lib, "ws2_32")
+﻿#include "framework.h"
+#include "resource.h"
+
+#pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
@@ -9,13 +12,17 @@
 #include <fstream>
 using namespace std;
 
-#include "Resource.h"
-
 #define SERVER_PORT 9000
 #define CLIENT_MAX_NUMBER 2
 #define RECV_SIZE 1024
+#define MAX_LOADSTRING 100
+
+#define IDC_CLOSE 1000
+#define IDC_PROGRESS1 1001
+#define IDC_PROGRESS2 1002
 
 
+HINSTANCE hInst;
 int client_number = 0;
 SOCKET listener;
 
@@ -33,64 +40,95 @@ INT_PTR CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM);
 void ErrorAbort(const char* msg);
 void ErrorDisplay(const char* msg);
 
+
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+//INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_opt_ HINSTANCE hPrevInstance,
-					 _In_ LPWSTR    lpCmdLine,
-					 _In_ int       nCmdShow) {
-	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
-	if (!my_recv_event) return 1;
+					 _In_ LPWSTR lpCmdLine,
+					 _In_ int nCmdShow) {
+	WNDCLASSEXW wproperty;
+	wproperty.cbSize = sizeof(WNDCLASSEX);
+	wproperty.style = CS_HREDRAW | CS_VREDRAW;
+	wproperty.lpfnWndProc = WndProc;
+	wproperty.cbClsExtra = 0;
+	wproperty.cbWndExtra = 0;
+	wproperty.hInstance = hInstance;
+	wproperty.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WSWINDOWSGUISERVER));
+	wproperty.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wproperty.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wproperty.lpszMenuName = MAKEINTRESOURCEW(IDC_WSWINDOWSGUISERVER);
+	wproperty.lpszClassName = L"WSWINDOWSGUISERVER";
+	wproperty.hIconSm = LoadIcon(wproperty.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	RegisterClassExW(&wproperty);
+
+	hInst = hInstance;
+	HWND hWnd = CreateWindowW(L"WSWINDOWSGUISERVER", L"Server", WS_OVERLAPPEDWINDOW
+							  , CW_USEDEFAULT, 0, CW_USEDEFAULT, 0
+							  , nullptr, nullptr, hInstance, nullptr);
+	if (NULL == hWnd) return 1;
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
 
 	CreateThread(NULL, 0, ServerProcess, NULL, 0, NULL);
 
-	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProcedure);
-
-	closesocket(listener);
-	CloseHandle(my_recv_event);
-	WSACleanup();
-	return 0;
-}
-
-INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-	switch (message) {
-		case WM_INITDIALOG:
-		{
-			my_noclient_label = GetDlgItem(hDlg, IDL_NOCLIENT);
-			my_label[0] = GetDlgItem(hDlg, IDL_CLIENT1);
-			my_progress[0] = GetDlgItem(hDlg, IDC_PROGRESS1);
-			my_receive_percent[0] = GetDlgItem(hDlg, IDL_CLIENT1_INFO);
-			my_label[1] = GetDlgItem(hDlg, IDL_CLIENT2);
-			my_progress[1] = GetDlgItem(hDlg, IDC_PROGRESS2);
-			my_receive_percent[1] = GetDlgItem(hDlg, IDL_CLIENT2_INFO);
-
-			// 처음에는 진행도 안보이기
-			for (int i = 0; i < CLIENT_MAX_NUMBER; ++i) {
-				SendMessage(my_progress[i], PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-
-				ShowWindow(my_label[i], FALSE);
-				ShowWindow(my_progress[i], FALSE);
-				ShowWindow(my_receive_percent[i], FALSE);
+	MSG msg;
+	while (true) {
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
+				break;
 			}
 
-			return TRUE;
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
 		}
+	}
+
+	return (int)msg.wParam;
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	switch (message) {
+		case WM_CREATE: 
+		{
+			my_progress[0] = CreateWindowEx(0, PROGRESS_CLASS, TEXT("")
+											   , WS_CHILD | WS_VISIBLE
+											   , 20, 60, 320, 64, hWnd, (HMENU)IDC_PROGRESS1
+											   , hInst, NULL);
+
+			my_progress[1] = CreateWindowEx(0, PROGRESS_CLASS, TEXT("")
+											   , WS_CHILD | WS_VISIBLE
+											   , 20, 144, 320, 64, hWnd, (HMENU)IDC_PROGRESS2
+											   , hInst, NULL);
+
+			CreateWindow(TEXT("button"), TEXT("Click Me"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+			250, 306, 170, 64, hWnd, (HMENU)IDC_CLOSE, hInst, NULL);
+		}
+		break;
 
 		case WM_COMMAND:
 		{
-			if (LOWORD(wParam) == IDOK) {
-				EndDialog(hDlg, LOWORD(wParam));
-				return TRUE;
+			int wmId = LOWORD(wParam);
+			switch (wmId) {
+				case IDC_CLOSE:
+					DestroyWindow(hWnd);
+					break;
+				default:
+					return DefWindowProc(hWnd, message, wParam, lParam);
 			}
 		}
 		break;
 
-		case WM_CLOSE:
-		{
-			EndDialog(hDlg, 0);
-			return TRUE;
-		}
-		break;
+		case WM_DESTROY:
+			PostQuitMessage(0);
+			break;
+
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-	return FALSE;
+	return 0;
 }
 
 DWORD WINAPI ServerProcess(LPVOID lpparameter) {

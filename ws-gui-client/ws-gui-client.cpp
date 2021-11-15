@@ -20,13 +20,17 @@ using namespace std;
 
 SOCKET my_socket;
 
-HWND my_transfer_status;
 HWND my_filename_label;
+
+OPENFILENAME my_open_dialog;
+char file_path[BUFF_SIZE];
+char file_name[BUFF_SIZE];
 bool file_is_ready = false;
 
-DWORD WINAPI FileTransferProcess(LPVOID lpparameter);
+DWORD WINAPI ClientProcess(LPVOID lpparameter);
 INT_PTR CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM);
 
+void SendData(SOCKET socket, char* buffer, int length);
 void ErrorAbort(const char* msg);
 void ErrorDisplay(const char* msg);
 
@@ -34,8 +38,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_opt_ HINSTANCE hPrevInstance,
 					 _In_ LPWSTR lpCmdLine,
 					 _In_ int nCmdShow) {
-	CreateThread(NULL, 0, FileTransferProcess, NULL, 0, NULL);
+	CreateThread(NULL, 0, ClientProcess, NULL, 0, NULL);
 	
+	ZeroMemory(&my_open_dialog, sizeof(LPOPENFILENAME));
+	my_open_dialog.lStructSize = sizeof(my_open_dialog);
+	my_open_dialog.lpstrFilter = "All\0*.*";
+	my_open_dialog.nFilterIndex = 0;
+	my_open_dialog.nMaxFile = BUFF_SIZE;
+	my_open_dialog.nMaxFileTitle = BUFF_SIZE;
+	my_open_dialog.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProcedure);
 
 	closesocket(my_socket);
@@ -47,11 +59,7 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	switch (message) {
 		case WM_INITDIALOG:
 		{
-			my_transfer_status = GetDlgItem(hDlg, IDL_CONNECT);
 			my_filename_label = GetDlgItem(hDlg, IDL_FILENAME);
-
-			SetWindowText(my_transfer_status, TEXT("연결 없음"));
-			SetWindowText(my_filename_label, TEXT("불러온 파일 없음"));
 
 			return TRUE;
 		}
@@ -61,14 +69,17 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			switch (wParam) {
 				case IDC_FILEOPENBUTTON: // 파일 열기
 				{
-					OPENFILENAME my_open_dialog;
-					ZeroMemory(&my_open_dialog, sizeof(LPOPENFILENAME));
-
+					ZeroMemory(file_path, sizeof(file_path));
+					ZeroMemory(file_name, sizeof(file_name));
 					my_open_dialog.hwndOwner = hDlg;
-					
+
+					my_open_dialog.lpstrFile = file_path;
+					my_open_dialog.lpstrFileTitle = file_name;
+
 					BOOL result = GetOpenFileName(&my_open_dialog);
 					if (result) {
 						file_is_ready = true;
+						SetWindowText(my_filename_label, my_open_dialog.lpstrFileTitle);
 					}
 				}
 				break;
@@ -76,14 +87,10 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 				case IDC_SENDBUTTON:
 				{
 					if (file_is_ready) {
-						char file_path[BUFF_SIZE];
-
-						scanf_s("%s", &file_path, BUFF_SIZE);
-						file_path[BUFF_SIZE - 1] = '\0';
-
 						long file_size = 0;
 						char* file_buffer = nullptr;
-						FILE* myfile = fopen(file_path, "rb");
+
+						FILE* myfile = fopen(my_open_dialog.lpstrFileTitle, "rb");
 						if (myfile) {
 							fseek(myfile, 0, SEEK_END);
 							file_size = ftell(myfile);
@@ -94,11 +101,11 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 							fread(file_buffer, file_size, 1, myfile);
 							fclose(myfile);
 						} else {
-							//err_quit("fopen");
+							ErrorDisplay("fopen");
 						}
 
-						//send_packet(my_socket, file_path, strlen(file_path));
-						//send_packet(my_socket, (char*)(file_buffer), file_size);
+						SendData(my_socket, file_name, strlen(file_name));
+						SendData(my_socket, (char*)(file_buffer), file_size);
 					}
 				}
 				break;
@@ -122,7 +129,7 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	return FALSE;
 }
 
-DWORD WINAPI FileTransferProcess(LPVOID lpparameter) {
+DWORD WINAPI ClientProcess(LPVOID lpparameter) {
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
 
@@ -140,13 +147,23 @@ DWORD WINAPI FileTransferProcess(LPVOID lpparameter) {
 	if (SOCKET_ERROR == connect(my_socket, (SOCKADDR*)(&server_address), addr_size))
 		ErrorAbort("connect");
 
-	char connect_text[64];
-	ZeroMemory(connect_text, 64);
+	while (true) {
 
-	wsprintf(connect_text, TEXT("서버와 연결됨 - %s"), SERVER_IP);
-	SetWindowText(my_transfer_status, connect_text);
+	}
 
 	return 0;
+}
+
+void SendData(SOCKET socket, char* buffer, int length) {
+	int result = send(socket, (char*)(&length), sizeof(int), 0);
+	if (SOCKET_ERROR == result) {
+		ErrorAbort("send 1");
+	}
+
+	result = send(socket, buffer, length, 0);
+	if (SOCKET_ERROR == result) {
+		ErrorAbort("send 2");
+	}
 }
 
 void ErrorAbort(const char* msg) {

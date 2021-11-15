@@ -1,4 +1,4 @@
-Ôªø#pragma comment(lib, "ws2_32")
+#pragma comment(lib, "ws2_32")
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
@@ -6,20 +6,29 @@
 #include <commctrl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 #include <fstream>
 using namespace std;
-
-#include "Resource.h"
 
 #define SERVER_PORT 9000
 #define CLIENT_MAX_NUMBER 2
 #define RECV_SIZE 1024
 
+#define IDL_CLIENT1 110
+#define IDL_CLIENT2 111
+#define IDL_NOCLIENT 112
+#define IDL_CLIENT1_INFO 113
+#define IDL_CLIENT2_INFO 114
+
+#define IDC_CLOSE 1000
+#define IDC_PROGRESS1 1001
+#define IDC_PROGRESS2 1002
 
 int client_number = 0;
 SOCKET listener;
 
-HWND my_noclient_label; // Ïó∞Í≤∞ ÏïåÎ¶º ÌÖçÏä§Ìä∏
+HINSTANCE my_hInstance;
+HWND my_noclient_label; // ø¨∞· æÀ∏≤ ≈ÿΩ∫∆Æ
 HWND my_label[CLIENT_MAX_NUMBER];
 HWND my_progress[CLIENT_MAX_NUMBER];
 HWND my_receive_percent[CLIENT_MAX_NUMBER];
@@ -28,6 +37,8 @@ HANDLE my_recv_event;
 int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int flags);
 DWORD WINAPI ServerProcess(LPVOID lpparameter);
 DWORD WINAPI ReceiveFileThread(LPVOID lpparameter);
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+
 INT_PTR CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM);
 
 void ErrorAbort(const char* msg);
@@ -37,60 +48,47 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_opt_ HINSTANCE hPrevInstance,
 					 _In_ LPWSTR    lpCmdLine,
 					 _In_ int       nCmdShow) {
+	my_hInstance = hInstance;
+	
+	WNDCLASSEX properties;
+	properties.cbSize = sizeof(WNDCLASSEX);
+	properties.style = CS_HREDRAW | CS_VREDRAW;
+	properties.lpfnWndProc = WndProc;
+	properties.cbClsExtra = 0;
+	properties.cbWndExtra = 0;
+	properties.hInstance = hInstance;
+	properties.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+	properties.lpszMenuName = "Server";
+	properties.lpszClassName = "MyGUIServer";
+	if (!RegisterClassEx(&properties)) return 1;
+
+	HWND hWnd = CreateWindow("MyGUIServer", "Server"
+							 , WS_POPUP | WS_CAPTION | WS_MINIMIZEBOX
+							 , CW_USEDEFAULT, 0, 640, 480, nullptr, nullptr
+							 , hInstance, nullptr);
+	if (!hWnd) return 1;
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
 	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
 	if (!my_recv_event) return 1;
 
 	CreateThread(NULL, 0, ServerProcess, NULL, 0, NULL);
 
-	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProcedure);
-
-	closesocket(listener);
-	CloseHandle(my_recv_event);
-	WSACleanup();
-	return 0;
-}
-
-INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-	switch (message) {
-		case WM_INITDIALOG:
-		{
-			my_noclient_label = GetDlgItem(hDlg, IDL_NOCLIENT);
-			my_label[0] = GetDlgItem(hDlg, IDL_CLIENT1);
-			my_progress[0] = GetDlgItem(hDlg, IDC_PROGRESS1);
-			my_receive_percent[0] = GetDlgItem(hDlg, IDL_CLIENT1_INFO);
-			my_label[1] = GetDlgItem(hDlg, IDL_CLIENT2);
-			my_progress[1] = GetDlgItem(hDlg, IDC_PROGRESS2);
-			my_receive_percent[1] = GetDlgItem(hDlg, IDL_CLIENT2_INFO);
-
-			// Ï≤òÏùåÏóêÎäî ÏßÑÌñâÎèÑ ÏïàÎ≥¥Ïù¥Í∏∞
-			for (int i = 0; i < CLIENT_MAX_NUMBER; ++i) {
-				SendMessage(my_progress[i], PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-
-				ShowWindow(my_label[i], FALSE);
-				ShowWindow(my_progress[i], FALSE);
-				ShowWindow(my_receive_percent[i], FALSE);
+	MSG msg;
+	while (true) {
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
+				break;
 			}
 
-			return TRUE;
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
 		}
-
-		case WM_COMMAND:
-		{
-			if (LOWORD(wParam) == IDOK) {
-				EndDialog(hDlg, LOWORD(wParam));
-				return TRUE;
-			}
-		}
-		break;
-
-		case WM_CLOSE:
-		{
-			EndDialog(hDlg, 0);
-			return TRUE;
-		}
-		break;
 	}
-	return FALSE;
+
+	return (int)msg.wParam;
 }
 
 DWORD WINAPI ServerProcess(LPVOID lpparameter) {
@@ -178,7 +176,7 @@ DWORD WINAPI ReceiveFileThread(LPVOID lpparameter) {
 
 		ofstream file_writer(file_path, ios::binary);
 		if (!file_writer) {
-			ErrorDisplay("ÌååÏùº Ïì∞Í∏∞ Ïò§Î•ò");
+			cerr << "∆ƒ¿œ æ≤±‚ ø¿∑˘" << endl;
 			return 0;
 		}
 
@@ -220,11 +218,11 @@ int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int fl
 		int percent = ((double)(progress) / (double)(data_length)) * 100;
 		SendMessage(my_progress[client_index], PBM_SETPOS, (WPARAM)(percent), 0);
 
-		// ÏßÑÌñâÎèÑ ÌçºÏÑºÌä∏
+		// ¡¯«‡µµ ∆€ºæ∆Æ
 		char infotext[32];
 		ZeroMemory(infotext, 32);
 
-		wsprintf(infotext, TEXT("ÏßÑÌñâÎèÑ: %d%%"), percent);
+		wsprintf(infotext, TEXT("¡¯«‡µµ: %d%%"), percent);
 
 		SetWindowText(my_receive_percent[client_index], infotext);
 
@@ -233,6 +231,59 @@ int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int fl
 	}
 
 	return (progress);
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	switch (message) {
+		case WM_CREATE:
+		{
+			my_progress[0] = CreateWindowEx(0, PROGRESS_CLASS, TEXT("")
+											   , WS_CHILD | WS_VISIBLE
+											   , 20, 60, 320, 64, hWnd, (HMENU)IDC_PROGRESS1
+											   , my_hInstance, NULL);
+
+			my_progress[1] = CreateWindowEx(0, PROGRESS_CLASS, TEXT("")
+											   , WS_CHILD | WS_VISIBLE
+											   , 20, 144, 320, 64, hWnd, (HMENU)IDC_PROGRESS2
+											   , my_hInstance, NULL);
+
+			CreateWindow(TEXT("button"), TEXT("Click Me"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+			450, 396, 170, 64, hWnd, (HMENU)IDC_CLOSE, my_hInstance, NULL);
+
+			// √≥¿Ωø°¥¬ ¡¯«‡µµ æ»∫∏¿Ã±‚
+			for (int i = 0; i < CLIENT_MAX_NUMBER; ++i) {
+				ShowWindow(my_receive_percent[i], FALSE);
+			}
+		}
+		break;
+
+
+
+		case WM_PAINT:
+		{
+
+		}
+		break;
+
+		case WM_DESTROY:
+		{
+			for (int i = 0; i < CLIENT_MAX_NUMBER; ++i) {
+				DestroyWindow(my_progress[i]);
+			}
+			
+			closesocket(listener);
+			CloseHandle(my_recv_event);
+			WSACleanup(); 
+
+			KillTimer(hWnd, 0);
+			PostQuitMessage(0);
+		}
+		break;
+
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
 }
 
 void ErrorAbort(const char* msg) {

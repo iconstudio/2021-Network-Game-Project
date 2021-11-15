@@ -33,6 +33,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-gui-server", "ws-gui-ser
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-gui-client", "ws-gui-client\ws-gui-client.vcxproj", "{8042BA6F-DE0C-4A20-8854-1FE8AE319F7D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-windows-gui-server", "ws-windows-gui-server\ws-windows-gui-server.vcxproj", "{91188152-626F-4826-B709-3F81D6A83DFD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -161,6 +163,14 @@ Global
 		{8042BA6F-DE0C-4A20-8854-1FE8AE319F7D}.Release|x64.Build.0 = Release|x64
 		{8042BA6F-DE0C-4A20-8854-1FE8AE319F7D}.Release|x86.ActiveCfg = Release|Win32
 		{8042BA6F-DE0C-4A20-8854-1FE8AE319F7D}.Release|x86.Build.0 = Release|Win32
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Debug|x64.ActiveCfg = Debug|x64
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Debug|x64.Build.0 = Debug|x64
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Debug|x86.ActiveCfg = Debug|Win32
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Debug|x86.Build.0 = Debug|Win32
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x64.ActiveCfg = Release|x64
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x64.Build.0 = Release|x64
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x86.ActiveCfg = Release|Win32
+		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
