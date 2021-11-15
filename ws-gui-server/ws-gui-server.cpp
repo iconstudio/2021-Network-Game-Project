@@ -221,9 +221,10 @@ int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int fl
 		SendMessage(my_progress[client_index], PBM_SETPOS, (WPARAM)(percent), 0);
 
 		// 진행도 퍼센트
-		char infotext[100];
-		ZeroMemory(infotext, 100);
-		sprintf(infotext, "진행도: %d%%", percent);
+		char infotext[32];
+		ZeroMemory(infotext, 32);
+
+		wsprintf(infotext, TEXT("%d%%"), percent);
 
 		SetWindowText(my_receive_percent[client_index], infotext);
 
