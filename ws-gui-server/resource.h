@@ -9,7 +9,6 @@
 #define IDL_NOCLIENT                    112
 #define IDL_CLIENT1_INFO                113
 #define IDL_CLIENT2_INFO                114
-#define IDL_CLIENT1_INFO2               114
 #define IDR_MAINFRAME                   128
 #define IDD_DIALOG1                     129
 #define IDC_PROGRESS1                   1000

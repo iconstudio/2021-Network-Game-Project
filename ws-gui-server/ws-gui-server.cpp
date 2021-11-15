@@ -5,14 +5,11 @@
 #include <WinSock2.h>
 #include <commctrl.h>
 #include <stdlib.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
 #include <iostream>
 #include <fstream>
 using namespace std;
 
-#include "resource.h"
+#include "Resource.h"
 
 #define SERVER_PORT 9000
 #define CLIENT_MAX_NUMBER 2
@@ -26,14 +23,13 @@ HWND my_noclient_label; // 연결 알림 텍스트
 HWND my_label[CLIENT_MAX_NUMBER];
 HWND my_progress[CLIENT_MAX_NUMBER];
 HWND my_receive_percent[CLIENT_MAX_NUMBER];
-
 HANDLE my_recv_event;
 
 int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int flags);
-
 DWORD WINAPI ServerProcess(LPVOID lpparameter);
 DWORD WINAPI ReceiveFileThread(LPVOID lpparameter);
 INT_PTR CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM);
+
 void ErrorAbort(const char* msg);
 void ErrorDisplay(const char* msg);
 
@@ -46,7 +42,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	CreateThread(NULL, 0, ServerProcess, NULL, 0, NULL);
 
-	//CreateDialog()
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProcedure);
 
 	closesocket(listener);
@@ -76,17 +71,26 @@ INT_PTR CALLBACK DlgProcedure(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 				ShowWindow(my_receive_percent[i], FALSE);
 			}
 
-			return (INT_PTR)TRUE;
+			return TRUE;
 		}
 
 		case WM_COMMAND:
+		{
 			if (LOWORD(wParam) == IDOK) {
 				EndDialog(hDlg, LOWORD(wParam));
-				return (INT_PTR)TRUE;
+				return TRUE;
 			}
-			break;
+		}
+		break;
+
+		case WM_CLOSE:
+		{
+			EndDialog(hDlg, 0);
+			return TRUE;
+		}
+		break;
 	}
-	return (INT_PTR)FALSE;
+	return FALSE;
 }
 
 DWORD WINAPI ServerProcess(LPVOID lpparameter) {
@@ -109,7 +113,6 @@ DWORD WINAPI ServerProcess(LPVOID lpparameter) {
 	if (SOCKET_ERROR == result) ErrorAbort("listen");
 
 
-	cout << "서버 실행 중" << '\n';
 	while (true) {
 		SOCKADDR_IN client_address;
 		int address_length = sizeof(client_address);
@@ -120,9 +123,6 @@ DWORD WINAPI ServerProcess(LPVOID lpparameter) {
 			ErrorDisplay("accept");
 			continue;
 		}
-
-		cout << "클라이언트 접속 - IP 주소: " << inet_ntoa(client_address.sin_addr)
-			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
 
 		HANDLE hthread = CreateThread(NULL, 0, ReceiveFileThread, (LPVOID)(client_socket), 0, NULL);
 
@@ -224,7 +224,7 @@ int ReceiveFile(SOCKET sk, int client_index, char* data, int data_length, int fl
 		char infotext[32];
 		ZeroMemory(infotext, 32);
 
-		wsprintf(infotext, TEXT("%d%%"), percent);
+		wsprintf(infotext, TEXT("진행도: %d%%"), percent);
 
 		SetWindowText(my_receive_percent[client_index], infotext);
 
@@ -256,7 +256,7 @@ void ErrorDisplay(const char* msg) {
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code,
 				  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)(&lpMSGBuffer), 0, NULL);
 
-	cout << msg << " - " << (char*)(lpMSGBuffer);
+	//cout << msg << " - " << (char*)(lpMSGBuffer);
 
 	LocalFree(lpMSGBuffer);
 }
