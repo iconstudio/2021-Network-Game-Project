@@ -12,114 +12,29 @@
 #include <fstream>
 using namespace std;
 
-HANDLE my_print_event, my_recv_event;
+#include "resource.h"
+
+
+HANDLE my_threads[CLIENT_MAX_NUMBER];
+HANDLE my_recv_event;
 int client_number = 0;
 
-void err_quit(const char* msg);
-void err_display(const char* msg);
+int ReceiveFile(SOCKET sk, char* file_path, int data_length, int flags);
+DWORD WINAPI ServerProcess(LPVOID lpparameter);
+DWORD WINAPI ReceiveProcess(LPVOID lpparameter);
+INT_PTR CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM);
+void ErrorAbort(const char* msg);
+void ErrorDisplay(const char* msg);
 
-
-DWORD WINAPI ProgressPrintProcess(LPVOID lpparameter) {
-	while (true) {
-		int result = WaitForSingleObject(my_print_event, INFINITE);
-		if (result != WAIT_OBJECT_0) return 1;
-
-		system("cls");
-		EnterCriticalSection(&my_cs);
-		for (auto it : my_threads_info) {
-			int progress = it->progress;
-			int limit = it->size;
-			int percent = ((double)(progress) / (double)(limit)) * 100;
-
-			cout << "스레드 " << it->index << " 수신률: " << percent << "% (" << progress << "/" << limit << ")\n";
-		}
-		LeaveCriticalSection(&my_cs);
-
-		SetEvent(my_recv_event);
-	}
-	return 0;
-}
-
-DWORD WINAPI ClientReceiveProcess(LPVOID lpparameter) {
-	SOCKET client_socket = reinterpret_cast<SOCKET>(lpparameter);
-
-	while (true) {
-		int buffer_length = 0;
-		int result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
-		if (SOCKET_ERROR == result) {
-			err_display("receive 1");
-			break;
-		} else if (0 == result) {
-			break;
-		}
-
-		char file_path[RECV_SIZE + 1];
-		ZeroMemory(file_path, RECV_SIZE + 1);
-		result = recv(client_socket, file_path, buffer_length, MSG_WAITALL);
-		if (SOCKET_ERROR == result) {
-			err_display("receive 2");
-			break;
-		} else if (0 == result) {
-			break;
-		}
-
-		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
-		if (SOCKET_ERROR == result) {
-			err_display("receive 3");
-			break;
-		} else if (0 == result) {
-			break;
-		}
-
-		ofstream file_writer(file_path, ios::binary);
-		if (!file_writer) {
-			cout << "파일 쓰기 오류" << '\n';
-			break;
-		}
-
-		int progress = 0;
-		char buffer[RECV_SIZE + 1];
-		ZeroMemory(buffer, RECV_SIZE + 1);
-
-		while (progress < buffer_length) {
-			int result = WaitForSingleObject(my_recv_event, INFINITE);
-			if (result != WAIT_OBJECT_0) return 1;
-
-			result = recv(client_socket, buffer, RECV_SIZE, 0);
-
-			if (SOCKET_ERROR == result) {
-				err_display("receive 4");
-				break;
-			} else if (0 == result) {
-				break;
-			}
-
-			progress += result;
-
-			file_writer.write(buffer, result);
-			int percent = ((double)(progress) / (double)(buffer_length)) * 100;
-
-			cout << "클라이언트 " << client_socket << " 수신률: " << percent << "% (" << progress << "/" << buffer_length << ")\n";
-
-
-			SetEvent(my_print_event);
-		}
-		if (0 == progress) break;
-
-		file_writer.close();
-	}
-
-	closesocket(client_socket);
-	return 0;
-}
-
-int main(void) {
+int APIENTRY WinMain(_In_ HINSTANCE hInstance,
+					 _In_opt_ HINSTANCE hPrevInstance,
+					 _In_ LPSTR lpCmdLine,
+					 _In_ int nCmdShow) {
 	WSADATA wsa;
-
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
 
 	SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
-	if (INVALID_SOCKET == listener) err_quit("socket");
+	if (INVALID_SOCKET == listener) ErrorAbort("socket");
 
 	SOCKADDR_IN server_address;
 	ZeroMemory(&server_address, sizeof(server_address));
@@ -128,19 +43,15 @@ int main(void) {
 	server_address.sin_port = htons(SERVER_PORT);
 
 	int result = bind(listener, (SOCKADDR*)(&server_address), sizeof(server_address));
-	if (SOCKET_ERROR == result) err_quit("bind");
+	if (SOCKET_ERROR == result) ErrorAbort("bind");
 
 	result = listen(listener, CLIENT_MAX_NUMBER);
-	if (SOCKET_ERROR == result) err_quit("listen");
+	if (SOCKET_ERROR == result) ErrorAbort("listen");
 
-	my_print_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (!my_print_event) return 1;
-
-	my_recv_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	my_recv_event = CreateEvent(NULL, FALSE, TRUE, NULL);
 	if (!my_recv_event) return 1;
 
-	HANDLE print_thread = CreateThread(NULL, 0, ProgressPrintProcess, NULL, 0, NULL);
-	if (!print_thread) return 1;
+	//DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProcedure);
 
 	cout << "서버 실행 중" << '\n';
 	while (true) {
@@ -150,31 +61,127 @@ int main(void) {
 
 		SOCKET client_socket = accept(listener, (SOCKADDR*)(&client_address), &address_length);
 		if (SOCKET_ERROR == client_socket) {
-			err_display("accept");
+			ErrorDisplay("accept");
 			continue;
 		}
 
 		cout << "클라이언트 접속 - IP 주소: " << inet_ntoa(client_address.sin_addr)
 			<< ", 포트 번호: " << ntohs(client_address.sin_port) << '\n';
 
-		HANDLE hthread = CreateThread(NULL, 0, ClientReceiveProcess, (LPVOID*)(&client_socket), 0, NULL);
+		HANDLE hthread = CreateThread(NULL, 0, ReceiveProcess, (LPVOID)(client_socket), 0, NULL);
 
 		if (NULL == hthread) {
 			closesocket(client_socket);
 		} else {
-			client_number++;
+			if (client_number < CLIENT_MAX_NUMBER) {
+				my_threads[client_number++] = hthread;
+				break;
+			}
 		}
 	}
 
+	WaitForMultipleObjects(CLIENT_MAX_NUMBER, my_threads, TRUE, INFINITE);
+
 	closesocket(listener);
 
-	CloseHandle(my_print_event);
 	CloseHandle(my_recv_event);
 	WSACleanup();
 	return 0;
 }
 
-void err_quit(const char* msg) {
+LRESULT CALLBACK DlgProcedure(HWND, UINT, WPARAM, LPARAM) {
+	return TRUE;
+}
+
+DWORD WINAPI ServerProcess(LPVOID lpparameter) {
+	//
+	return 0;
+}
+
+DWORD WINAPI ReceiveProcess(LPVOID lpparameter) {
+	SOCKET client_socket = (SOCKET)(lpparameter);
+
+	while (true) {
+		int buffer_length = 0;
+		int result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
+		if (SOCKET_ERROR == result) {
+			ErrorDisplay("receive 1");
+			break;
+		} else if (0 == result) {
+			break;
+		}
+
+		char file_path[RECV_SIZE];
+		ZeroMemory(file_path, RECV_SIZE);
+
+		result = recv(client_socket, file_path, buffer_length, MSG_WAITALL);
+		if (SOCKET_ERROR == result) {
+			ErrorDisplay("receive 2");
+			break;
+		} else if (0 == result) {
+			break;
+		}
+
+		result = recv(client_socket, (char*)(&buffer_length), sizeof(int), MSG_WAITALL);
+		if (SOCKET_ERROR == result) {
+			ErrorDisplay("receive 3");
+			break;
+		} else if (0 == result) {
+			break;
+		}
+
+		result = ReceiveFile(client_socket, file_path, buffer_length, 0);
+		if (SOCKET_ERROR == result) {
+			ErrorDisplay("receive 4");
+			break;
+		} else if (0 == result) {
+			break;
+		}
+	}
+
+	closesocket(client_socket);
+	return 0;
+}
+
+int ReceiveFile(SOCKET sk, char* file_path, int data_length, int flags) {
+	ofstream file_writer(file_path, ios::binary);
+	if (!file_writer) {
+		cerr << "파일 쓰기 오류" << endl;
+		return 0;
+	}
+
+	int progress = 0;
+	while (progress < data_length) {
+		int result = WaitForSingleObject(my_recv_event, INFINITE);
+		if (result != WAIT_OBJECT_0) return 0;
+
+		char buffer[RECV_SIZE + 1];
+		ZeroMemory(buffer, RECV_SIZE + 1);
+
+		result = recv(sk, (buffer + progress), RECV_SIZE, flags);
+		if (SOCKET_ERROR == result) {
+			file_writer.close();
+			return SOCKET_ERROR;
+		} else if (0 == result) {
+			file_writer.close();
+			return 0;
+		}
+
+		progress += result;
+		file_writer.write(buffer, result);
+
+		int percent = ((double)(progress) / (double)(data_length)) * 100;
+		cout << "클라이언트 " << sk << " 수신률: " << percent << "% (" << progress << "/" << data_length << ")\n";
+
+		Sleep(10);
+		SetEvent(my_recv_event);
+	}
+
+	file_writer.close();
+	return (progress);
+}
+
+void ErrorAbort(const char* msg) {
 	LPVOID lpMSGBuffer;
 
 	int error_code = WSAGetLastError();
@@ -188,7 +195,7 @@ void err_quit(const char* msg) {
 	exit(1);
 }
 
-void err_display(const char* msg) {
+void ErrorDisplay(const char* msg) {
 	LPVOID lpMSGBuffer;
 
 	int error_code = WSAGetLastError();
