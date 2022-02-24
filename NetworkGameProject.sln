@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31613.86
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PlatformerRoguelike", "PlatformerRoguelike\PlatformerRoguelike.vcxproj", "{19E2E575-74AC-4F3C-B39C-04EF6851C872}"
 EndProject
@@ -34,6 +34,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-gui-client", "ws-gui-client\ws-gui-client.vcxproj", "{8042BA6F-DE0C-4A20-8854-1FE8AE319F7D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-windows-gui-server", "ws-windows-gui-server\ws-windows-gui-server.vcxproj", "{91188152-626F-4826-B709-3F81D6A83DFD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ws-select-server", "ws-select-server\ws-select-server.vcxproj", "{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -171,6 +173,14 @@ Global
 		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x64.Build.0 = Release|x64
 		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x86.ActiveCfg = Release|Win32
 		{91188152-626F-4826-B709-3F81D6A83DFD}.Release|x86.Build.0 = Release|Win32
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Debug|x64.ActiveCfg = Debug|x64
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Debug|x64.Build.0 = Debug|x64
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Debug|x86.ActiveCfg = Debug|Win32
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Debug|x86.Build.0 = Debug|Win32
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Release|x64.ActiveCfg = Release|x64
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Release|x64.Build.0 = Release|x64
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Release|x86.ActiveCfg = Release|Win32
+		{F1B0E99C-78A7-4A5F-9FE8-927A989F290A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
