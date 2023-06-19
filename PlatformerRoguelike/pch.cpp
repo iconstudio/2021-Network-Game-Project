@@ -2,24 +2,29 @@
 #include "resource.h"
 
 
-void Render::refresh(HWND hwnd) {
+void Render::refresh(HWND hwnd)
+{
 	InvalidateRect(hwnd, NULL, FALSE);
 }
 
-void Render::transform_set(HDC world, XFORM& info) {
+void Render::transform_set(HDC world, XFORM& info)
+{
 	SetWorldTransform(world, &info);
 }
 
-void Render::transform_set_identity(HDC world) {
+void Render::transform_set_identity(HDC world)
+{
 	SetWorldTransform(world, &transform_identity);
 }
 
-void Render::draw_end(HDC canvas, HGDIOBJ object_old, HGDIOBJ object_new) {
+void Render::draw_end(HDC canvas, HGDIOBJ object_old, HGDIOBJ object_new)
+{
 	SelectObject(canvas, object_old);
 	DeleteObject(object_new);
 }
 
-void Render::draw_clear(HDC canvas, int width, int height, COLORREF color) {
+void Render::draw_clear(HDC canvas, int width, int height, COLORREF color)
+{
 	auto m_hPen = CreatePen(PS_NULL, 1, color);
 	auto m_oldhPen = (HPEN)SelectObject(canvas, m_hPen);
 	auto m_hBR = CreateSolidBrush(color);
@@ -29,18 +34,21 @@ void Render::draw_clear(HDC canvas, int width, int height, COLORREF color) {
 	draw_end(canvas, m_oldhPen, m_hPen);
 }
 
-BOOL Render::draw_rectangle(HDC canvas, int x1, int y1, int x2, int y2) {
+BOOL Render::draw_rectangle(HDC canvas, int x1, int y1, int x2, int y2)
+{
 	return Rectangle(canvas, x1, y1, x2, y2);
 }
 
 WindowsClient::WindowsClient(LONG cw, LONG ch)
 	: width(cw), height(ch), procedure(NULL) {}
 
-WindowsClient::~WindowsClient() {
+WindowsClient::~WindowsClient()
+{
 	UnregisterClassW(class_id, instance);
 }
 
-BOOL WindowsClient::initialize(HINSTANCE handle, WNDPROC procedure, LPCWSTR title, LPCWSTR id, INT cmd_show) {
+BOOL WindowsClient::initialize(HINSTANCE handle, WNDPROC procedure, LPCWSTR title, LPCWSTR id, INT cmd_show)
+{
 	properties.cbSize = sizeof(WNDCLASSEX);
 	properties.style = CS_HREDRAW | CS_VREDRAW;
 	properties.lpfnWndProc = procedure;
@@ -62,7 +70,8 @@ BOOL WindowsClient::initialize(HINSTANCE handle, WNDPROC procedure, LPCWSTR titl
 	title_caption = title;
 	class_id = id;
 
-	if (!hWnd) {
+	if (!hWnd)
+	{
 		return FALSE;
 	}
 

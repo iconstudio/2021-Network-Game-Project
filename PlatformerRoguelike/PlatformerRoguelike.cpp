@@ -29,14 +29,16 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_opt_ HINSTANCE hPrevInstance,
 					 _In_ LPWSTR    lpCmdLine,
-					 _In_ int       nCmdShow) {
+					 _In_ int       nCmdShow)
+{
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_PLATFORMERROGUELIKE, szWindowClass, MAX_LOADSTRING);
-	
-	if (!game_client.initialize(hInstance, WndProc, szTitle, szWindowClass, nCmdShow)) {
+
+	if (!game_client.initialize(hInstance, WndProc, szTitle, szWindowClass, nCmdShow))
+	{
 		return FALSE;
 	}
 
@@ -59,9 +61,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	framework.init();
 
 	MSG msg;
-	while (true) {
-		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_QUIT) {
+	while (true)
+	{
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT)
+			{
 				break;
 			}
 
@@ -75,17 +80,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 oPlayer::oPlayer(double x, double y, GameWorldMesh* newmesh)
 	: GameInstance(x, y, newmesh), imxs(1)
-	, attack_cooldown(0.0), attack_combo_time(0.0), attack_count(0) {
+	, attack_cooldown(0.0), attack_combo_time(0.0), attack_count(0)
+{
 	set_sprite(sPlayer);
 	gravity = GRAVITY;
 }
 
-void oPlayer::on_create() {
+void oPlayer::on_create()
+{
 	attack_count = 0;
 	GameInstance::on_create();
 }
 
-void oPlayer::on_update(double frame_advance) {
+void oPlayer::on_update(double frame_advance)
+{
 	int check_left = framework.input_check(VK_LEFT);
 	int check_right = framework.input_check(VK_RIGHT);
 	int check_up = framework.input_check(VK_UP);
@@ -100,7 +108,8 @@ void oPlayer::on_update(double frame_advance) {
 
 	hspeed = check_hor * PLAYER_WALK_VELOCITY;
 
-	if (0 != check_hor) {
+	if (0 != check_hor)
+	{
 		imxs = check_hor;
 		if (imxs == -1)
 			sprite_index = sPlayerLeft;
@@ -110,100 +119,128 @@ void oPlayer::on_update(double frame_advance) {
 
 	if (!in_air)
 		jumped = false;
-	if (jumped && vspeed < 0.0 && !check_jump_cnt) {
+	if (jumped && vspeed < 0.0 && !check_jump_cnt)
+	{
 		jumped = false;
 		vspeed *= 0.5;
 	}
-	if (check_jump && !in_air && !jumped) {
+	if (check_jump && !in_air && !jumped)
+	{
 		jump(PLAYER_JUMP_VELOCITY);
 		jumped = true;
 	}
 
-	if (check_attack && attack_cooldown <= 0.0) {
+	if (check_attack && attack_cooldown <= 0.0)
+	{
 		attack_count = attack_count_max;
 	}
 
-	if (0 < attack_combo_time) {
+	if (0 < attack_combo_time)
+	{
 		attack_combo_time -= frame_advance;
-	} else if (0 < attack_count) {
-		if (check_up) {
+	}
+	else if (0 < attack_count)
+	{
+		if (check_up)
+		{
 			auto shoot = my_room->instance_create<oPlayerBullet>(x, bbox_top() + 1, worldmesh);
 			shoot->vspeed = -BULLET_VELOCITY;
 			shoot->image_angle = 90.0;
-		} else {
+		}
+		else
+		{
 			double shx = x + imxs * 3.0;
 			auto shoot = my_room->instance_create<oPlayerBullet>(shx, y, worldmesh);
 			shoot->hspeed = BULLET_VELOCITY * imxs;
 			shoot->image_angle = imxs * 180.0;
 		}
 
-		if (0 < attack_count) {
+		if (0 < attack_count)
+		{
 			attack_combo_time = attack_combo_period;
 			attack_count--;
-		} else {
+		}
+		else
+		{
 			attack_cooldown = attack_period;
 		}
-	} else if (0 < attack_cooldown) {
+	}
+	else if (0 < attack_cooldown)
+	{
 		attack_cooldown -= frame_advance;
 	}
 
 	GameInstance::on_update(frame_advance);
 }
 
-void oPlayer::thud() {
+void oPlayer::thud()
+{
 	jumped = false;
 	GameInstance::thud();
 }
 
 oPlayerBullet::oPlayerBullet(double x, double y, GameWorldMesh* newmesh)
-	: GameInstance(x, y, newmesh), time(0.0) {
+	: GameInstance(x, y, newmesh), time(0.0)
+{
 	set_sprite(sBullet);
 }
 
-void oPlayerBullet::on_update(double frame_advance) {
-	if (time < BULLET_EXPIRE_PERIOD) {
+void oPlayerBullet::on_update(double frame_advance)
+{
+	if (time < BULLET_EXPIRE_PERIOD)
+	{
 		time += frame_advance;
-	} else {
+	}
+	else
+	{
 		my_room->instance_kill(this);
 		return;
 	}
 	GameInstance::on_update(frame_advance);
 }
 
-void oPlayerBullet::thud() {
+void oPlayerBullet::thud()
+{
 	my_room->instance_kill(this);
 }
 
-void oPlayerBullet::ceil() {
+void oPlayerBullet::ceil()
+{
 	my_room->instance_kill(this);
 }
 
-void oPlayerBullet::side() {
+void oPlayerBullet::side()
+{
 	my_room->instance_kill(this);
 }
 
 oDoor::oDoor(double x, double y)
-	: GameInstance(x, y), closed(false) {
+	: GameInstance(x, y), closed(false)
+{
 	set_sprite(sDoor);
 }
 
-void oDoor::close() {
+void oDoor::close()
+{
 	closed = true;
 	set_sprite(sClosedDoor);
 }
 
 oWoodbox::oWoodbox(double x, double y, GameWorldMesh* newmesh)
-	: GameInstance(x, y, newmesh) {
+	: GameInstance(x, y, newmesh)
+{
 	set_sprite(sWoodbox);
 }
 
-roomStart::roomStart() : GameScene(VIEW_W, VIEW_H) {
+roomStart::roomStart() : GameScene(VIEW_W, VIEW_H)
+{
 	fade_blender.BlendOp = AC_SRC_OVER;
 	fade_blender.BlendFlags = 0;
 	fade_blender.AlphaFormat = 0; //AC_SRC_ALPHA;
 }
 
-void roomStart::on_create() {
+void roomStart::on_create()
+{
 	score = 0;
 	lives = 5;
 	shield = 0;
@@ -227,7 +264,8 @@ void roomStart::on_create() {
 	GameScene::on_create();
 }
 
-void roomStart::on_destroy() {
+void roomStart::on_destroy()
+{
 	DeleteDC(cutout_surface);
 	DeleteObject(cutout_bitmap);
 	DeleteDC(fade_surface);
@@ -235,47 +273,65 @@ void roomStart::on_destroy() {
 	GameScene::on_destroy();
 }
 
-void roomStart::on_update(double frame_advance) {
-	if (framework.input_check_pressed(VK_F3)) {
+void roomStart::on_update(double frame_advance)
+{
+	if (framework.input_check_pressed(VK_F3))
+	{
 		reset();
 		return;
 	}
 
-	if (complete) {
-		if (clear_time < CLEAR_WAIT_PERIOD) {
+	if (complete)
+	{
+		if (clear_time < CLEAR_WAIT_PERIOD)
+		{
 			clear_time += frame_advance;
-		} else {
+		}
+		else
+		{
 			done = true;
 		}
-	} else if (start_time < START_WAIT_PERIOD) {
+	}
+	else if (start_time < START_WAIT_PERIOD)
+	{
 		start_time += frame_advance;
-	} else {
+	}
+	else
+	{
 		GameScene::on_update(frame_advance);
 	}
 }
 
-void roomStart::on_render(HDC canvas) {
+void roomStart::on_render(HDC canvas)
+{
 	worldmesh.on_render(canvas);
 	GameScene::on_render(canvas);
 
 	double fade_rate = 0.0;
 	double fade_cx, fade_cy, fade_ex1, fade_ey1, fade_ex2, fade_ey2;
 
-	if (complete) {
-		if (clear_time < CLEAR_WAIT_PERIOD) {
+	if (complete)
+	{
+		if (clear_time < CLEAR_WAIT_PERIOD)
+		{
 			fade_rate = min(1.0, clear_time / CLEAR_WAIT_PERIOD);
-		} else {
+		}
+		else
+		{
 			fade_rate = 1.0;
 		}
 		fade_cx = VIEW_W * 0.5;
 		fade_cy = VIEW_H * 0.5;
-	} else if (start_time < START_WAIT_PERIOD) {
+	}
+	else if (start_time < START_WAIT_PERIOD)
+	{
 		fade_rate = min(1.0, start_time / START_WAIT_PERIOD);
 		fade_cx = worldmesh.playerx;
 		fade_cy = worldmesh.playery;
 	}
 
-	if (0.0 < fade_rate) {
+	if (0.0 < fade_rate)
+	{
 		Render::draw_clear(cutout_surface, VIEW_W, VIEW_H, 0);
 
 		auto m_hPen = CreatePen(PS_NULL, 1, COLOR_GOLD);
@@ -292,7 +348,7 @@ void roomStart::on_render(HDC canvas) {
 
 		Render::draw_end(cutout_surface, m_oldhPen, m_hPen);
 		Render::draw_end(cutout_surface, m_oldhBR, m_hBR);
-		
+
 		m_hPen = CreatePen(PS_NULL, 1, COLOR_BLACK);
 		m_oldhPen = (HPEN)SelectObject(cutout_surface, m_hPen);
 		m_hBR = CreateSolidBrush(COLOR_BLACK);
@@ -307,24 +363,29 @@ void roomStart::on_render(HDC canvas) {
 	}
 }
 
-roomGame::roomGame() : GameScene(VIEW_W * 3, 640) {
+roomGame::roomGame() : GameScene(VIEW_W * 3, 640)
+{
 
 }
 
-void roomGame::on_create() {
+void roomGame::on_create()
+{
 	view_x = worldmesh.playerx - VIEW_W * 0.5;
 	view_y = worldmesh.playery - VIEW_H * 0.5;
 }
 
-void roomGame::on_destroy() {
+void roomGame::on_destroy()
+{
 
 }
 
-void roomGame::on_update(double frame_advance) {
+void roomGame::on_update(double frame_advance)
+{
 
 }
 
-void roomGame::on_render(HDC canvas) {
+void roomGame::on_render(HDC canvas)
+{
 
 }
 
@@ -335,49 +396,61 @@ GameSpawnPoint::GameSpawnPoint(SPAWN_TYPES ctype, int cx, int cy)
 
 GameWorldMesh::GameWorldMesh(GameScene* room, int new_width, int new_height)
 	: my_room(room), map_bitmap(NULL), map_surface(NULL)
-	, width(new_width), height(new_height), iwidth(new_width / 16), iheight(new_width / 16) {}
+	, width(new_width), height(new_height), iwidth(new_width / 16), iheight(new_width / 16)
+{}
 
-GameWorldMesh::~GameWorldMesh() {
+GameWorldMesh::~GameWorldMesh()
+{
 	DeleteDC(map_surface);
 	DeleteObject(map_bitmap);
 	clear();
 }
 
-void GameWorldMesh::load(const char* mapfile) {
+void GameWorldMesh::load(const char* mapfile)
+{
 	build_terrain.clear();
 	build_terrain.reserve(iheight * iwidth + 1);
 
 	FILE* myfile = nullptr;
 	auto result = fopen_s(&myfile, mapfile, "r");
-	if (myfile) {
+	if (myfile)
+	{
 		u_int ch, j = 0;
-		while (!feof(myfile)) {
+		while (!feof(myfile))
+		{
 			ch = fgetc(myfile);
 
-			if (ch != '\n') {
+			if (ch != '\n')
+			{
 				build_terrain.push_back(new GameMeshPiece(ch));
 				++j;
 			}
 		}
 
 		fclose(myfile);
-	} else {
-		if (MessageBox(NULL, TEXT("게임 지도 파일을 찾을 수 없습니다."), TEXT("오류"), MB_OK | MB_ICONERROR)) {
+	}
+	else
+	{
+		if (MessageBox(NULL, TEXT("게임 지도 파일을 찾을 수 없습니다."), TEXT("오류"), MB_OK | MB_ICONERROR))
+		{
 			DestroyWindow(game_client.hwindow);
 			return;
 		}
 	}
 }
 
-void GameWorldMesh::set_tile(int ix, int iy, TILES tile) {
+void GameWorldMesh::set_tile(int ix, int iy, TILES tile)
+{
 
 }
 
-void GameWorldMesh::make_tile(int ix, int iy) {
+void GameWorldMesh::make_tile(int ix, int iy)
+{
 
 }
 
-void GameWorldMesh::build() {
+void GameWorldMesh::build()
+{
 	HDC world_dc = GetDC(NULL);
 	map_surface = CreateCompatibleDC(world_dc);
 	map_bitmap = CreateCompatibleBitmap(world_dc, VIEW_W, VIEW_H);
@@ -391,8 +464,10 @@ void GameWorldMesh::build() {
 
 	double cx, cy;
 
-	for (int j = 0; j < 10; ++j) {
-		for (int k = 0; k < 8; ++k) {
+	for (int j = 0; j < 10; ++j)
+	{
+		for (int k = 0; k < 8; ++k)
+		{
 			cx = j * 32.0;
 			cy = k * 32.0;
 			sBacktile->draw(map_surface, cx, cy);
@@ -400,14 +475,17 @@ void GameWorldMesh::build() {
 	}
 
 	int i = 0;
-	for (const auto& tile : build_terrain) {
+	for (const auto& tile : build_terrain)
+	{
 		const char data = tile->data;
 
-		if (data != TILES::NONE) {
+		if (data != TILES::NONE)
+		{
 			cx = 16.0 * (i - floor(i / iwidth) * iwidth);
 			cy = 16.0 * floor(i / iwidth);
 
-			switch (data) {
+			switch (data)
+			{
 				case TILES::PLAYER:
 				{
 					playerx = cx + 8.0;
@@ -466,7 +544,7 @@ void GameWorldMesh::build() {
 				break;
 
 				default:
-					break;
+				break;
 			}
 		}
 		++i;
@@ -475,67 +553,86 @@ void GameWorldMesh::build() {
 	Render::draw_end(map_surface, m_oldhPen, m_hPen);
 }
 
-void GameWorldMesh::clear() {
+void GameWorldMesh::clear()
+{
 	build_backtile.clear();
 	build_terrain.clear();
 	build_doodads.clear();
 	build_instances.clear();
 }
 
-void GameWorldMesh::reset() {
+void GameWorldMesh::reset()
+{
 	clear();
 	my_room->reset();
 }
 
-GameMeshPiece* GameWorldMesh::get_terrain(int ix, int iy) const {
-	if (0 <= ix && 0 <= iy && ix < iwidth && iy < iheight) {
+GameMeshPiece* GameWorldMesh::get_terrain(int ix, int iy) const
+{
+	if (0 <= ix && 0 <= iy && ix < iwidth && iy < iheight)
+	{
 		u_int index = ix + iy * iwidth;
 		if (index < build_terrain.size())
 			return build_terrain.at(index);
 		else
 			return nullptr;
-	} else {
+	}
+	else
+	{
 		return nullptr;
 	}
 }
 
-GameMeshPiece* GameWorldMesh::place_terrain(double cx, double cy) {
+GameMeshPiece* GameWorldMesh::place_terrain(double cx, double cy)
+{
 	int tx = floor(cx / 16);
 	int ty = floor(cy / 16);
 	return get_terrain(tx, ty);
 }
 
-bool GameWorldMesh::place_solid(double cx, double cy) {
+bool GameWorldMesh::place_solid(double cx, double cy)
+{
 	auto check = place_terrain(cx, cy);
-	if (check) {
+	if (check)
+	{
 		char data = check->data;
 		return (data == TILES::BLOCK);
-	} else {
+	}
+	else
+	{
 		return false;
 	}
 }
 
-bool GameWorldMesh::place_plate(double cx, double cy) {
+bool GameWorldMesh::place_plate(double cx, double cy)
+{
 	auto check = place_terrain(cx, cy);
-	if (check) {
+	if (check)
+	{
 		char data = check->data;
 		return (data == TILES::PLATE);
-	} else {
+	}
+	else
+	{
 		return false;
 	}
 }
 
-bool GameWorldMesh::place_collider(double cx, double cy) {
+bool GameWorldMesh::place_collider(double cx, double cy)
+{
 	return place_solid(cx, cy) || place_plate(cx, cy);
 }
 
-void GameWorldMesh::on_render(HDC canvas) {
+void GameWorldMesh::on_render(HDC canvas)
+{
 	BitBlt(canvas, 0, 0, VIEW_W, VIEW_H, map_surface, 0, 0, SRCCOPY);
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	switch (message) {
-		// 창 생성
+LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+// 창 생성
 		case WM_CREATE:
 		{
 			SetTimer(hwnd, RENDER_TIMER_ID, 1, NULL);
@@ -608,7 +705,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		break;
 
 		default:
-			return DefWindowProc(hwnd, message, wParam, lParam);
+		return DefWindowProc(hwnd, message, wParam, lParam);
 	}
 	return 0;
 }
